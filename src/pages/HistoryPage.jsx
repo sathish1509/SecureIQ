@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { timeAgo } from '../utils/timeAgo';
+import { useAuth } from '../context/AuthContext';
 
 export default function HistoryPage() {
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/history?limit=100')
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    fetch('/api/history?limit=100', { headers })
       .then(res => res.ok ? res.json() : [])
       .then(data => {
         setLogs(Array.isArray(data) ? data : []);
       })
       .catch(err => console.error('Error loading scan history:', err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [token]);
 
   const getVerdictBadge = (verdict) => {
     const v = (verdict || '').toLowerCase();

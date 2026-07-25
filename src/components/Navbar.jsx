@@ -11,6 +11,11 @@ export default function Navbar() {
     navigate('/login');
   };
 
+  const getInitials = (emailStr) => {
+    if (!emailStr) return 'SA';
+    const namePart = emailStr.split('@')[0];
+    return namePart.substring(0, 2).toUpperCase();
+  };
 
   return (
     <header className="bg-surface border-b border-brandBorder h-14 sticky top-0 z-50">
@@ -48,6 +53,16 @@ export default function Navbar() {
             URL Scanner
           </NavLink>
           <NavLink 
+            to="/email-scanner" 
+            className={({ isActive }) => 
+              `text-sm font-medium py-1.5 border-b-2 no-underline whitespace-nowrap transition-colors ${
+                isActive ? 'text-accentBlue border-accentBlue' : 'text-brandText-secondary border-transparent hover:text-brandText-main'
+              }`
+            }
+          >
+            Email Scanner
+          </NavLink>
+          <NavLink 
             to="/dashboard" 
             className={({ isActive }) => 
               `text-sm font-medium py-1.5 border-b-2 no-underline whitespace-nowrap transition-colors ${
@@ -79,7 +94,7 @@ export default function Navbar() {
           </NavLink>
         </nav>
 
-        {/* Status & Auth Action Buttons */}
+        {/* Status & User Profile Actions */}
         <div className="flex items-center gap-3 text-xs font-medium text-brandText-muted shrink-0">
           <div className="flex items-center gap-2 whitespace-nowrap">
             <span className="w-2 h-2 rounded-full bg-safe-fill shadow-[0_0_0_2px_rgba(16,185,129,0.2)]"></span>
@@ -88,23 +103,28 @@ export default function Navbar() {
 
           {isLoggedIn ? (
             <div className="flex items-center gap-3 pl-3 border-l border-brandBorder shrink-0">
-              <Link to="/profile" className="flex items-center gap-2 text-xs font-semibold text-brandText-main hover:text-accentBlue no-underline whitespace-nowrap">
+              <Link to="/profile" className="flex items-center gap-2 text-xs font-semibold text-brandText-main hover:text-accentBlue no-underline whitespace-nowrap" title={user?.email}>
                 <div className="w-7 h-7 shrink-0 bg-navy text-white rounded-full flex items-center justify-center font-bold text-[11px] leading-none">
-                  {user.avatar}
+                  {getInitials(user?.email)}
                 </div>
-                <span className="hidden sm:inline text-xs font-semibold whitespace-nowrap">{user.name}</span>
+                <span className="hidden sm:inline text-xs font-semibold whitespace-nowrap max-w-[120px] truncate">
+                  {user?.email}
+                </span>
               </Link>
-              <button onClick={handleLogout} className="btn-outline btn-sm whitespace-nowrap">
+              <button 
+                type="button" 
+                onClick={handleLogout} 
+                className="btn-outline btn-sm whitespace-nowrap cursor-pointer"
+              >
                 Logout
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2 pl-3 border-l border-brandBorder shrink-0">
-              <Link to="/login" className="btn-outline btn-sm whitespace-nowrap">Login</Link>
-              <Link to="/login" className="btn-primary btn-sm whitespace-nowrap">Get Started</Link>
+              <Link to="/login" className="btn-outline btn-sm whitespace-nowrap">Sign In</Link>
+              <Link to="/register" className="btn-primary btn-sm whitespace-nowrap">Get Started</Link>
             </div>
           )}
-
         </div>
       </div>
     </header>

@@ -1,13 +1,10 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
-  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
     navigate('/login');
   };
 
@@ -89,7 +86,6 @@ export default function Sidebar() {
           >
             <span className="font-mono text-xs">[OUT]</span> Logout
           </button>
-
         </nav>
       </div>
     </aside>

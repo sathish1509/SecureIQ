@@ -20,11 +20,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend source code, database module, threat intel module & pre-trained scikit-learn models
+# Copy backend source code, database module, threat intel module, email analyzer, auth module & pre-trained scikit-learn models
 COPY app.py ./
 COPY database.py ./
 COPY feature_extractor.py ./
 COPY threat_intel.py ./
+COPY email_analyzer.py ./
+COPY auth.py ./
 COPY Model/ ./Model/
 
 # Expose backend API port

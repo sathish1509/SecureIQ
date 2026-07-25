@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import ThreatTrendChart from '../components/ThreatTrendChart';
 import { timeAgo } from '../utils/timeAgo';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardPage() {
+  const { token } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentScans, setRecentScans] = useState([]);
   const [trendData, setTrendData] = useState([]);
@@ -15,11 +17,13 @@ export default function DashboardPage() {
     if (isManual) setIsRefreshing(true);
     else setLoading(true);
 
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
     try {
       const [statsRes, historyRes, trendRes] = await Promise.all([
-        fetch('/api/stats').then(res => res.ok ? res.json() : null),
-        fetch('/api/history?limit=10').then(res => res.ok ? res.json() : []),
-        fetch('/api/trend?days=7').then(res => res.ok ? res.json() : [])
+        fetch('/api/stats', { headers }).then(res => res.ok ? res.json() : null),
+        fetch('/api/history?limit=10', { headers }).then(res => res.ok ? res.json() : []),
+        fetch('/api/trend?days=7', { headers }).then(res => res.ok ? res.json() : [])
       ]);
 
       if (statsRes) setStats(statsRes);

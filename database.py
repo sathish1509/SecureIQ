@@ -76,6 +76,16 @@ def init_db():
         if db.is_postgres:
             db.execute(
                 """
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                """
+            )
+            db.execute(
+                """
                 CREATE TABLE IF NOT EXISTS scans (
                     id SERIAL PRIMARY KEY,
                     url TEXT NOT NULL,
@@ -84,11 +94,41 @@ def init_db():
                     risk_score INTEGER NOT NULL,
                     confidence REAL NOT NULL,
                     reasons TEXT,
-                    scanned_at TEXT NOT NULL
+                    scanned_at TEXT NOT NULL,
+                    scan_type TEXT DEFAULT 'url',
+                    user_id INTEGER REFERENCES users(id),
+                    pipeline_timeline TEXT,
+                    total_latency_ms REAL
                 );
                 """
             )
+            try:
+                db.execute("ALTER TABLE scans ADD COLUMN IF NOT EXISTS scan_type TEXT DEFAULT 'url';")
+            except Exception:
+                pass
+            try:
+                db.execute("ALTER TABLE scans ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);")
+            except Exception:
+                pass
+            try:
+                db.execute("ALTER TABLE scans ADD COLUMN IF NOT EXISTS pipeline_timeline TEXT;")
+            except Exception:
+                pass
+            try:
+                db.execute("ALTER TABLE scans ADD COLUMN IF NOT EXISTS total_latency_ms REAL;")
+            except Exception:
+                pass
         else:
+            db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                """
+            )
             db.execute(
                 """
                 CREATE TABLE IF NOT EXISTS scans (
@@ -99,21 +139,117 @@ def init_db():
                     risk_score INTEGER NOT NULL,
                     confidence REAL NOT NULL,
                     reasons TEXT,
-                    scanned_at TEXT NOT NULL
+                    scanned_at TEXT NOT NULL,
+                    scan_type TEXT DEFAULT 'url',
+                    user_id INTEGER REFERENCES users(id),
+                    pipeline_timeline TEXT,
+                    total_latency_ms REAL
                 );
                 """
             )
+            try:
+                db.execute("ALTER TABLE scans ADD COLUMN scan_type TEXT DEFAULT 'url';")
+            except Exception:
+                pass
+            try:
+                db.execute("ALTER TABLE scans ADD COLUMN user_id INTEGER REFERENCES users(id);")
+            except Exception:
+                pass
+            try:
+                db.execute("ALTER TABLE scans ADD COLUMN pipeline_timeline TEXT;")
+            except Exception:
+                pass
+            try:
+                db.execute("ALTER TABLE scans ADD COLUMN total_latency_ms REAL;")
+            except Exception:
+                pass
 
 
-def save_scan(scan_dict: dict) -> int:
+def create_user(email: str, password_hash: str) -> int:
+    created_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    with get_db_connection() as db:
+        if db.is_postgres:
+            cursor = db.execute(
+                """
+                INSERT INTO users (email, password_hash, created_at)
+                VALUES (?, ?, ?)
+                RETURNING id
+                """,
+                (email.lower().strip(), password_hash, created_at),
+            )
+            row = cursor.fetchone()
+            return row["id"] if row else 0
+        else:
+            cursor = db.execute(
+                """
+                INSERT INTO users (email, password_hash, created_at)
+                VALUES (?, ?, ?)
+                """,
+                (email.lower().strip(), password_hash, created_at),
+            )
+            return cursor.lastrowid
+
+
+def get_user_by_email(email: str) -> dict | None:
+    if not email:
+        return None
+    with get_db_connection() as db:
+        cursor = db.execute(
+            """
+            SELECT id, email, password_hash, created_at
+            FROM users
+            WHERE email = ?
+            """,
+            (email.lower().strip(),),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "id": row["id"],
+            "email": row["email"],
+            "password_hash": row["password_hash"],
+            "created_at": row["created_at"],
+        }
+
+
+def get_user_by_id(user_id: int) -> dict | None:
+    if not user_id:
+        return None
+    with get_db_connection() as db:
+        cursor = db.execute(
+            """
+            SELECT id, email, created_at
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "id": row["id"],
+            "email": row["email"],
+            "created_at": row["created_at"],
+        }
+
+
+def save_scan(scan_dict: dict, user_id: int | None = None) -> int:
     url = scan_dict.get("url", "")
     domain = scan_dict.get("domain", "")
     verdict = scan_dict.get("verdict", "Safe")
     risk_score = int(scan_dict.get("risk_score", 0))
     confidence = float(scan_dict.get("confidence", 0.0))
+    scan_type = scan_dict.get("scan_type") or scan_dict.get("type") or "url"
+    target_user_id = user_id if user_id is not None else scan_dict.get("user_id")
 
     signals = scan_dict.get("signals") or scan_dict.get("reasons") or []
     reasons_json = json.dumps(signals)
+
+    pipeline_timeline = scan_dict.get("pipeline_timeline")
+    timeline_json = json.dumps(pipeline_timeline) if pipeline_timeline else None
+    total_latency_ms = scan_dict.get("total_latency_ms")
 
     scanned_at = scan_dict.get("analyzed_at")
     if not scanned_at:
@@ -123,30 +259,38 @@ def save_scan(scan_dict: dict) -> int:
         if db.is_postgres:
             cursor = db.execute(
                 """
-                INSERT INTO scans (url, domain, verdict, risk_score, confidence, reasons, scanned_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO scans (url, domain, verdict, risk_score, confidence, reasons, scanned_at, scan_type, user_id, pipeline_timeline, total_latency_ms)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING id
                 """,
-                (url, domain, verdict, risk_score, confidence, reasons_json, scanned_at),
+                (url, domain, verdict, risk_score, confidence, reasons_json, scanned_at, scan_type, target_user_id, timeline_json, total_latency_ms),
             )
             row = cursor.fetchone()
             return row["id"] if row else 0
         else:
             cursor = db.execute(
                 """
-                INSERT INTO scans (url, domain, verdict, risk_score, confidence, reasons, scanned_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO scans (url, domain, verdict, risk_score, confidence, reasons, scanned_at, scan_type, user_id, pipeline_timeline, total_latency_ms)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (url, domain, verdict, risk_score, confidence, reasons_json, scanned_at),
+                (url, domain, verdict, risk_score, confidence, reasons_json, scanned_at, scan_type, target_user_id, timeline_json, total_latency_ms),
             )
             return cursor.lastrowid
+
+
+def _get_row_val(row, key, default=None):
+    try:
+        val = row[key]
+        return val if val is not None else default
+    except Exception:
+        return default
 
 
 def get_scan_by_id(scan_id: int) -> dict | None:
     with get_db_connection() as db:
         cursor = db.execute(
             """
-            SELECT id, url, domain, verdict, risk_score, confidence, reasons, scanned_at
+            SELECT id, url, domain, verdict, risk_score, confidence, reasons, scanned_at, scan_type, user_id, pipeline_timeline, total_latency_ms
             FROM scans
             WHERE id = ?
             """,
@@ -157,11 +301,20 @@ def get_scan_by_id(scan_id: int) -> dict | None:
             return None
 
         reasons_data = []
-        if row["reasons"]:
+        raw_reasons = _get_row_val(row, "reasons")
+        if raw_reasons:
             try:
-                reasons_data = json.loads(row["reasons"]) if isinstance(row["reasons"], str) else row["reasons"]
+                reasons_data = json.loads(raw_reasons) if isinstance(raw_reasons, str) else raw_reasons
             except Exception:
                 reasons_data = []
+
+        timeline_data = None
+        raw_timeline = _get_row_val(row, "pipeline_timeline")
+        if raw_timeline:
+            try:
+                timeline_data = json.loads(raw_timeline) if isinstance(raw_timeline, str) else raw_timeline
+            except Exception:
+                timeline_data = None
 
         return {
             "id": row["id"],
@@ -173,29 +326,54 @@ def get_scan_by_id(scan_id: int) -> dict | None:
             "reasons": reasons_data,
             "signals": reasons_data,
             "scanned_at": row["scanned_at"],
+            "scan_type": _get_row_val(row, "scan_type", "url"),
+            "user_id": _get_row_val(row, "user_id"),
+            "pipeline_timeline": timeline_data,
+            "total_latency_ms": _get_row_val(row, "total_latency_ms"),
         }
 
 
-def get_recent_scans(limit: int = 20) -> list[dict]:
+def get_recent_scans(limit: int = 20, user_id: int | None = None) -> list[dict]:
     with get_db_connection() as db:
-        cursor = db.execute(
-            """
-            SELECT id, url, domain, verdict, risk_score, confidence, reasons, scanned_at
-            FROM scans
-            ORDER BY id DESC
-            LIMIT ?
-            """,
-            (limit,),
-        )
+        if user_id is not None:
+            cursor = db.execute(
+                """
+                SELECT id, url, domain, verdict, risk_score, confidence, reasons, scanned_at, scan_type, user_id, pipeline_timeline, total_latency_ms
+                FROM scans
+                WHERE user_id = ?
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (user_id, limit),
+            )
+        else:
+            cursor = db.execute(
+                """
+                SELECT id, url, domain, verdict, risk_score, confidence, reasons, scanned_at, scan_type, user_id, pipeline_timeline, total_latency_ms
+                FROM scans
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
         rows = cursor.fetchall()
         result = []
         for row in rows:
             reasons_data = []
-            if row["reasons"]:
+            raw_reasons = _get_row_val(row, "reasons")
+            if raw_reasons:
                 try:
-                    reasons_data = json.loads(row["reasons"]) if isinstance(row["reasons"], str) else row["reasons"]
+                    reasons_data = json.loads(raw_reasons) if isinstance(raw_reasons, str) else raw_reasons
                 except Exception:
                     reasons_data = []
+
+            timeline_data = None
+            raw_timeline = _get_row_val(row, "pipeline_timeline")
+            if raw_timeline:
+                try:
+                    timeline_data = json.loads(raw_timeline) if isinstance(raw_timeline, str) else raw_timeline
+                except Exception:
+                    timeline_data = None
 
             result.append(
                 {
@@ -208,24 +386,43 @@ def get_recent_scans(limit: int = 20) -> list[dict]:
                     "reasons": reasons_data,
                     "signals": reasons_data,
                     "scanned_at": row["scanned_at"],
+                    "scan_type": _get_row_val(row, "scan_type", "url"),
+                    "user_id": _get_row_val(row, "user_id"),
+                    "pipeline_timeline": timeline_data,
+                    "total_latency_ms": _get_row_val(row, "total_latency_ms"),
                 }
             )
         return result
 
 
-def get_stats() -> dict:
+def get_stats(user_id: int | None = None) -> dict:
     with get_db_connection() as db:
-        cursor = db.execute(
-            """
-            SELECT 
-                COUNT(*) as total_scans,
-                SUM(CASE WHEN verdict = 'Phishing' THEN 1 ELSE 0 END) as phishing_count,
-                SUM(CASE WHEN verdict = 'Suspicious' THEN 1 ELSE 0 END) as suspicious_count,
-                SUM(CASE WHEN verdict = 'Safe' THEN 1 ELSE 0 END) as safe_count,
-                AVG(risk_score) as avg_risk_score
-            FROM scans
-            """
-        )
+        if user_id is not None:
+            cursor = db.execute(
+                """
+                SELECT 
+                    COUNT(*) as total_scans,
+                    SUM(CASE WHEN verdict = 'Phishing' THEN 1 ELSE 0 END) as phishing_count,
+                    SUM(CASE WHEN verdict = 'Suspicious' THEN 1 ELSE 0 END) as suspicious_count,
+                    SUM(CASE WHEN verdict = 'Safe' THEN 1 ELSE 0 END) as safe_count,
+                    AVG(risk_score) as avg_risk_score
+                FROM scans
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            )
+        else:
+            cursor = db.execute(
+                """
+                SELECT 
+                    COUNT(*) as total_scans,
+                    SUM(CASE WHEN verdict = 'Phishing' THEN 1 ELSE 0 END) as phishing_count,
+                    SUM(CASE WHEN verdict = 'Suspicious' THEN 1 ELSE 0 END) as suspicious_count,
+                    SUM(CASE WHEN verdict = 'Safe' THEN 1 ELSE 0 END) as safe_count,
+                    AVG(risk_score) as avg_risk_score
+                FROM scans
+                """
+            )
         row = cursor.fetchone()
 
         total_scans = (row["total_scans"] if row and row["total_scans"] else 0) or 0

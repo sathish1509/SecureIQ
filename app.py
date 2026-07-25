@@ -17,8 +17,10 @@ import pandas as pd
 from flask import Flask, jsonify, request, send_from_directory
 
 from feature_extractor import extract_features
-from database import init_db, save_scan, get_recent_scans, get_stats, get_daily_trend, get_scan_by_id
+from database import init_db, save_scan, get_recent_scans, get_stats, get_daily_trend, get_scan_by_id, create_user, get_user_by_email, get_user_by_id
 from threat_intel import check_urlhaus, check_virustotal
+from email_analyzer import combine_email_verdict, extract_and_score_urls, score_email_signals
+from auth import hash_password, check_password, generate_token, verify_token, get_optional_user_id, require_auth
 
 app = Flask(__name__, static_folder="dist", static_url_path="")
 
@@ -391,8 +393,12 @@ def combine_verdict(
 
 
 def analyze_with_model(url_str: str) -> dict:
+    t0 = time.perf_counter()
+
     normalized, host, has_ip, protocol = extract_host_info(url_str)
     features = extract_features(normalized)
+    t1 = time.perf_counter()
+
     row = pd.DataFrame([[features[col] for col in FEATURE_COLUMNS]], columns=FEATURE_COLUMNS)
 
     prediction = int(MODEL.predict(row)[0])
@@ -402,10 +408,12 @@ def analyze_with_model(url_str: str) -> dict:
     ml_risk_score = int(round(phishing_probability * 100))
 
     signals = build_signals(features, prediction)
+    t2 = time.perf_counter()
 
     # Perform external threat intelligence lookups (fail-safe, returns None on failure/timeout)
     urlhaus_res = check_urlhaus(normalized)
     vt_res = check_virustotal(normalized)
+    t3 = time.perf_counter()
 
     # Blend ML prediction with threat intelligence lookups
     final_risk_score, verdict, verdict_level = combine_verdict(
@@ -444,6 +452,23 @@ def analyze_with_model(url_str: str) -> dict:
                 },
             )
 
+    t4 = time.perf_counter()
+
+    t1_ms = round((t1 - t0) * 1000, 1)
+    t2_ms = round((t2 - t0) * 1000, 1)
+    t3_ms = round((t3 - t0) * 1000, 1)
+    t4_ms = round((t4 - t0) * 1000, 1)
+
+    intel_detail = "Feeds verified" if (urlhaus_res is not None or vt_res is not None) else "Feeds unavailable, ML-only"
+
+    pipeline_timeline = [
+        {"stage": "Request Received", "detail": "Payload parsed", "elapsed_ms": 0.0},
+        {"stage": "Lexical Audit", "detail": "30 features extracted", "elapsed_ms": t1_ms},
+        {"stage": "ML Inference", "detail": "RandomForest scored", "elapsed_ms": t2_ms},
+        {"stage": "Intel Lookup", "detail": intel_detail, "elapsed_ms": t3_ms},
+        {"stage": "Report Finalized", "detail": f"Verdict: {verdict}", "elapsed_ms": t4_ms},
+    ]
+
     return {
         "url": normalized,
         "domain": host,
@@ -456,6 +481,8 @@ def analyze_with_model(url_str: str) -> dict:
         "confidence": confidence,
         "signals": signals,
         "sources_checked": sources_checked,
+        "pipeline_timeline": pipeline_timeline,
+        "total_latency_ms": t4_ms,
     }
 
 
@@ -476,22 +503,89 @@ def health():
     )
 
 
+@app.route("/api/auth/register", methods=["POST"])
+def auth_register():
+    data = request.get_json(silent=True) or request.form or {}
+    email = (data.get("email") or "").strip().lower()
+    password = (data.get("password") or "").strip()
+
+    if not email or "@" not in email:
+        return jsonify({"error": "Valid email address is required."}), 400
+
+    if len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters long."}), 400
+
+    existing_user = get_user_by_email(email)
+    if existing_user:
+        return jsonify({"error": "User with this email already exists."}), 409
+
+    try:
+        pass_hash = hash_password(password)
+        user_id = create_user(email, pass_hash)
+        if not user_id:
+            return jsonify({"error": "Failed to create user."}), 500
+        token = generate_token(user_id)
+        return jsonify({
+            "token": token,
+            "user": {
+                "id": user_id,
+                "email": email
+            }
+        }), 201
+    except Exception as exc:
+        return jsonify({"error": f"Registration failed: {exc}"}), 500
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def auth_login():
+    data = request.get_json(silent=True) or request.form or {}
+    email = (data.get("email") or "").strip().lower()
+    password = (data.get("password") or "").strip()
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required."}), 400
+
+    user = get_user_by_email(email)
+    if not user or not check_password(password, user["password_hash"]):
+        return jsonify({"error": "Invalid email or password."}), 401
+
+    token = generate_token(user["id"])
+    return jsonify({
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"]
+        }
+    }), 200
+
+
+@app.route("/api/auth/me", methods=["GET"])
+@require_auth
+def auth_me(current_user_id: int):
+    user = get_user_by_id(current_user_id)
+    if not user:
+        return jsonify({"error": "User not found."}), 404
+    return jsonify({"user": user}), 200
+
+
 @app.route("/api/stats", methods=["GET"])
 def stats():
+    user_id = get_optional_user_id()
     uptime_seconds = time.monotonic() - START_TIME
-    data = get_stats()
+    data = get_stats(user_id=user_id)
     data["uptime"] = format_uptime(uptime_seconds)
     return jsonify(data)
 
 
 @app.route("/api/history", methods=["GET"])
 def history():
+    user_id = get_optional_user_id()
     limit_arg = request.args.get("limit", 20)
     try:
         limit = int(limit_arg)
     except ValueError:
         limit = 20
-    return jsonify(get_recent_scans(limit=limit))
+    return jsonify(get_recent_scans(limit=limit, user_id=user_id))
 
 
 @app.route("/api/scan/<int:scan_id>", methods=["GET"])
@@ -515,6 +609,7 @@ def trend():
 @app.route("/api/analyze", methods=["POST"])
 @app.route("/analyze", methods=["POST"])
 def analyze():
+    user_id = get_optional_user_id()
     data = request.get_json(silent=True) or request.form
     url = (data.get("url") or "").strip()
 
@@ -528,7 +623,7 @@ def analyze():
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(analyze_with_model, url)
             result = future.result(timeout=ANALYZE_TIMEOUT_SECONDS)
-        scan_id = save_scan(result)
+        scan_id = save_scan(result, user_id=user_id)
         if scan_id:
             result["id"] = scan_id
         return jsonify(result)
@@ -537,6 +632,80 @@ def analyze():
         return jsonify({"error": "Analysis timed out after 8 seconds."}), 504
     except Exception as exc:
         return jsonify({"error": f"Analysis failed: {exc}"}), 500
+
+
+def analyze_email_job(sender: str, reply_to: str, subject: str, body: str, raw_text: str) -> dict:
+    t0 = time.perf_counter()
+    if raw_text:
+        if not sender:
+            f_m = re.search(r"^From:\s*(.+)$", raw_text, re.MULTILINE | re.IGNORECASE)
+            if f_m:
+                sender = f_m.group(1).strip()
+        if not reply_to:
+            r_m = re.search(r"^Reply-To:\s*(.+)$", raw_text, re.MULTILINE | re.IGNORECASE)
+            if r_m:
+                reply_to = r_m.group(1).strip()
+        if not subject:
+            s_m = re.search(r"^Subject:\s*(.+)$", raw_text, re.MULTILINE | re.IGNORECASE)
+            if s_m:
+                subject = s_m.group(1).strip()
+        if not body:
+            body = raw_text
+
+    t1 = time.perf_counter()
+    url_scores = extract_and_score_urls(body or raw_text, analyze_with_model)
+    t2 = time.perf_counter()
+
+    signal_res = score_email_signals(sender, reply_to, subject, body or raw_text)
+    t3 = time.perf_counter()
+
+    verdict_dict = combine_email_verdict(url_scores, signal_res, sender, subject)
+    t4 = time.perf_counter()
+
+    t1_ms = round((t1 - t0) * 1000, 1)
+    t2_ms = round((t2 - t0) * 1000, 1)
+    t3_ms = round((t3 - t0) * 1000, 1)
+    t4_ms = round((t4 - t0) * 1000, 1)
+
+    pipeline_timeline = [
+        {"stage": "Request Received", "detail": "Payload parsed", "elapsed_ms": 0.0},
+        {"stage": "Header Inspection", "detail": "Header fields parsed", "elapsed_ms": t1_ms},
+        {"stage": "URL Extraction", "detail": f"{len(url_scores)} URLs scored by ML", "elapsed_ms": t2_ms},
+        {"stage": "Signal Scoring", "detail": "Email heuristics evaluated", "elapsed_ms": t3_ms},
+        {"stage": "Report Finalized", "detail": f"Verdict: {verdict_dict.get('verdict')}", "elapsed_ms": t4_ms},
+    ]
+
+    verdict_dict["pipeline_timeline"] = pipeline_timeline
+    verdict_dict["total_latency_ms"] = t4_ms
+    return verdict_dict
+
+
+@app.route("/api/analyze-email", methods=["POST"])
+def analyze_email():
+    user_id = get_optional_user_id()
+    data = request.get_json(silent=True) or request.form or {}
+    sender = (data.get("sender") or data.get("from") or "").strip()
+    reply_to = (data.get("reply_to") or data.get("replyTo") or "").strip()
+    subject = (data.get("subject") or "").strip()
+    body = (data.get("body") or data.get("rawInput") or data.get("raw_text") or "").strip()
+    raw_text = (data.get("raw_text") or data.get("rawInput") or "").strip()
+
+    if not sender and not subject and not body and not raw_text:
+        return jsonify({"error": "Email content or header parameter is required."}), 400
+
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(analyze_email_job, sender, reply_to, subject, body, raw_text)
+            result = future.result(timeout=ANALYZE_TIMEOUT_SECONDS)
+        scan_id = save_scan(result, user_id=user_id)
+        if scan_id:
+            result["id"] = scan_id
+        return jsonify(result)
+
+    except FuturesTimeoutError:
+        return jsonify({"error": "Email analysis timed out after 8 seconds."}), 504
+    except Exception as exc:
+        return jsonify({"error": f"Email analysis failed: {exc}"}), 500
 
 
 @app.route("/", defaults={"path": ""})

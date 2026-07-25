@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function UrlScannerPage() {
+  const { token } = useAuth();
   const [url, setUrl] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
@@ -32,9 +34,14 @@ export default function UrlScannerPage() {
     }
 
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({ url: cleanUrl })
       });
 

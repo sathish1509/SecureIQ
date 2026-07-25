@@ -1,20 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useSearchParams, Link } from 'react-router-dom';
-import { timeAgo } from '../utils/timeAgo';
+import { useParams, useLocation, useSearchParams, Link } from 'react-router-dom';
 
 export default function ScanReportPage() {
   const location = useLocation();
+  const { scanId: scanIdFromParams } = useParams();
   const [searchParams] = useSearchParams();
   const scanIdFromQuery = searchParams.get('id');
 
-  const [scan, setScan] = useState(location.state?.scanData || location.state?.scanResult || null);
+  const targetScanId = scanIdFromParams || scanIdFromQuery;
+
+  const [scan, setScan] = useState(() => {
+    if (!targetScanId && (location.state?.scanData || location.state?.scanResult)) {
+      return location.state.scanData || location.state.scanResult;
+    }
+    return null;
+  });
+
   const [loading, setLoading] = useState(!scan);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [showCopyInput, setShowCopyInput] = useState(false);
 
   useEffect(() => {
-    // If state was already passed from navigation, use it
-    if (location.state?.scanData || location.state?.scanResult) {
+    // If state passed from navigation and no explicit URL id was specified, use it
+    if (!targetScanId && (location.state?.scanData || location.state?.scanResult)) {
       setScan(location.state.scanData || location.state.scanResult);
       setLoading(false);
       return;
@@ -24,14 +33,14 @@ export default function ScanReportPage() {
     setError(null);
 
     let fetchUrl = '/api/history?limit=1';
-    if (scanIdFromQuery) {
-      fetchUrl = `/api/scan/${scanIdFromQuery}`;
+    if (targetScanId) {
+      fetchUrl = `/api/scan/${targetScanId}`;
     }
 
     fetch(fetchUrl)
       .then((res) => {
         if (!res.ok) {
-          throw new Error(`Report record not found (Status ${res.status})`);
+          throw new Error(`Report record #${targetScanId || ''} not found (Status ${res.status})`);
         }
         return res.json();
       })
@@ -47,16 +56,30 @@ export default function ScanReportPage() {
         setError(err.message || 'Failed to load report metrics.');
       })
       .finally(() => setLoading(false));
-  }, [scanIdFromQuery, location.state]);
+  }, [targetScanId, location.state]);
 
-  const handleCopyLink = () => {
-    const reportUrl = scan?.id 
-      ? `${window.location.origin}/report?id=${scan.id}`
-      : window.location.href;
+  const getShareableUrl = () => {
+    if (scan?.id) {
+      return `${window.location.origin}/report/${scan.id}`;
+    }
+    return window.location.href;
+  };
 
-    navigator.clipboard.writeText(reportUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+  const handleCopyLink = async () => {
+    const reportUrl = getShareableUrl();
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(reportUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      } else {
+        setShowCopyInput(true);
+      }
+    } catch (err) {
+      console.warn('Clipboard API unavailable or blocked:', err);
+      setShowCopyInput(true);
+    }
   };
 
   const handleDownloadPDF = () => {
@@ -120,7 +143,7 @@ export default function ScanReportPage() {
   const circumference = 2 * Math.PI * radius; // 263.89
   const dashOffset = circumference - (circumference * (riskScore / 100));
 
-  const reportId = scan.id 
+  const reportIdStr = scan.id 
     ? `#SIQ-${scan.id.toString(16).padStart(6, '0').toUpperCase()}`
     : `#SIQ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
@@ -128,13 +151,26 @@ export default function ScanReportPage() {
     ? `${(scan.confidence * 100).toFixed(1)}% High`
     : '98.5% High';
 
+  // Dynamic Pipeline Timeline Data
+  const timeline = scan.pipeline_timeline || [
+    { stage: "Request Received", detail: "Payload parsed", elapsed_ms: 0.0 },
+    { stage: "Lexical Audit", detail: "30 features extracted", elapsed_ms: 4.2 },
+    { stage: "ML Inference", detail: "RandomForest scored", elapsed_ms: 11.8 },
+    { stage: "Intel Lookup", detail: "Feeds verified", elapsed_ms: 18.5 },
+    { stage: "Report Finalized", detail: `Verdict: ${scan.verdict || 'Safe'}`, elapsed_ms: 24.1 }
+  ];
+
+  const totalLatencyStr = scan.total_latency_ms != null 
+    ? `${Number(scan.total_latency_ms).toFixed(1)}ms`
+    : '24.1ms';
+
   return (
     <div className="flex flex-col gap-8">
       {/* Header & Export Action Bar */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <div className="text-xs font-mono font-medium text-brandText-muted bg-subtle px-1.5 py-0.5 border border-brandBorder-subtle rounded-sm mb-1 inline-block">
-            INSPECTION REPORT ID: {reportId}
+            INSPECTION REPORT ID: {reportIdStr}
           </div>
           <h1 className="font-heading text-2xl font-semibold text-brandText-main mb-0.5">
             Detailed Security Assessment Report
@@ -144,13 +180,30 @@ export default function ScanReportPage() {
           </p>
         </div>
 
-        <div className="flex gap-2">
-          <button type="button" className="btn-primary btn-sm cursor-pointer" onClick={handleDownloadPDF}>
-            📥 Download PDF / Print
-          </button>
-          <button type="button" className="btn-secondary btn-sm cursor-pointer" onClick={handleCopyLink}>
-            {copied ? '✓ Link Copied!' : '🔗 Copy Link'}
-          </button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-2">
+            <button type="button" className="btn-primary btn-sm cursor-pointer" onClick={handleDownloadPDF}>
+              📥 Download PDF / Print
+            </button>
+            <button type="button" className="btn-secondary btn-sm cursor-pointer" onClick={handleCopyLink}>
+              {copied ? '✓ Copied!' : '🔗 Copy Link'}
+            </button>
+          </div>
+
+          {/* Fallback copy input if clipboard API fails */}
+          {showCopyInput && (
+            <div className="flex items-center gap-1.5 mt-1 bg-subtle p-1.5 rounded border border-brandBorder">
+              <input 
+                type="text" 
+                readOnly 
+                value={getShareableUrl()} 
+                className="text-xs font-mono px-2 py-1 bg-surface border border-brandBorder rounded w-64 text-brandText-main"
+                onFocus={(e) => e.target.select()}
+                autoFocus
+              />
+              <span className="text-[11px] text-brandText-muted">Press Ctrl+C to copy</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -197,14 +250,14 @@ export default function ScanReportPage() {
               </span>
             </div>
             <h3 className="font-heading text-base font-semibold text-brandText-main mb-2 break-all">
-              Target URL: <code className="font-mono text-sm bg-subtle px-1.5 py-0.5 rounded border border-brandBorder-subtle">{scan.url}</code>
+              Target: <code className="font-mono text-sm bg-subtle px-1.5 py-0.5 rounded border border-brandBorder-subtle">{scan.url}</code>
             </h3>
             
             <p className="text-sm text-brandText-secondary mb-4">
               {riskScore >= 70 ? (
                 <>This target exhibits multiple high-risk malicious threat vectors including {signals.map(s => s.title).slice(0, 3).join(', ')}. Security intervention is recommended.</>
               ) : riskScore >= 40 ? (
-                <>This URL displays suspicious structural traits including {signals.map(s => s.title).slice(0, 2).join(', ')}. Proceed with caution.</>
+                <>This target displays suspicious structural traits including {signals.map(s => s.title).slice(0, 2).join(', ')}. Proceed with caution.</>
               ) : (
                 <>No critical threat anomalies detected. Protocol encryption, domain structure, and lexical indicators align with legitimate web traffic.</>
               )}
@@ -325,39 +378,40 @@ export default function ScanReportPage() {
         </div>
       </div>
 
-      {/* Execution Timeline */}
+      {/* Dynamic Execution Timeline */}
       <div className="signals-container">
         <div className="signals-header">
           <h2 className="signals-title">Scan Pipeline Execution Timeline</h2>
-          <span className="signals-count">Total Latency: 24.1ms</span>
+          <span className="signals-count">Total Latency: {totalLatencyStr}</span>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 text-center">
-            <div className="bg-subtle p-4 rounded-sm border border-brandBorder">
-              <div className="font-mono text-xs text-accentBlue font-bold">+0.0ms</div>
-              <div className="font-semibold text-sm mt-1">Request Received</div>
-              <div className="text-xs text-brandText-muted">Payload parsed</div>
-            </div>
-            <div className="bg-subtle p-4 rounded-sm border border-brandBorder">
-              <div className="font-mono text-xs text-accentBlue font-bold">+4.2ms</div>
-              <div className="font-semibold text-sm mt-1">Lexical Audit</div>
-              <div className="text-xs text-brandText-muted">30 Features extracted</div>
-            </div>
-            <div className="bg-subtle p-4 rounded-sm border border-brandBorder">
-              <div className="font-mono text-xs text-accentBlue font-bold">+11.8ms</div>
-              <div className="font-semibold text-sm mt-1">ML Inference</div>
-              <div className="text-xs text-brandText-muted">RandomForest Scored</div>
-            </div>
-            <div className="bg-subtle p-4 rounded-sm border border-brandBorder">
-              <div className="font-mono text-xs text-accentBlue font-bold">+18.5ms</div>
-              <div className="font-semibold text-sm mt-1">Intel Lookup</div>
-              <div className="text-xs text-brandText-muted">Feeds verified</div>
-            </div>
-            <div className={`p-4 rounded-sm border ${riskScore >= 70 ? 'bg-danger-bg border-danger-border' : riskScore >= 40 ? 'bg-warn-bg border-warn-border' : 'bg-safe-bg border-safe-border'}`}>
-              <div className={`font-mono text-xs font-bold ${scoreTextClass}`}>+24.1ms</div>
-              <div className={`font-semibold text-sm mt-1 ${scoreTextClass}`}>Report Finalized</div>
-              <div className={`text-xs ${scoreTextClass}`}>Verdict: {verdict}</div>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-center">
+            {timeline.map((item, idx) => {
+              const isFinal = idx === timeline.length - 1;
+              const elapsedVal = item.elapsed_ms != null ? Number(item.elapsed_ms).toFixed(1) : '0.0';
+              const elapsedStr = `+${elapsedVal}ms`;
+
+              return (
+                <div 
+                  key={idx} 
+                  className={`p-4 rounded-sm border ${
+                    isFinal 
+                      ? (riskScore >= 70 ? 'bg-danger-bg border-danger-border' : riskScore >= 40 ? 'bg-warn-bg border-warn-border' : 'bg-safe-bg border-safe-border') 
+                      : 'bg-subtle border-brandBorder'
+                  }`}
+                >
+                  <div className={`font-mono text-xs font-bold ${isFinal ? scoreTextClass : 'text-accentBlue'}`}>
+                    {elapsedStr}
+                  </div>
+                  <div className={`font-semibold text-sm mt-1 ${isFinal ? scoreTextClass : 'text-brandText-main'}`}>
+                    {item.stage}
+                  </div>
+                  <div className={`text-xs ${isFinal ? scoreTextClass : 'text-brandText-muted'}`}>
+                    {item.detail}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

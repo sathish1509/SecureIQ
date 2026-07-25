@@ -5,7 +5,14 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 import joblib
+
 import pandas as pd
 from flask import Flask, jsonify, request, send_from_directory
 
@@ -273,7 +280,7 @@ def is_valid_url(url_str: str) -> bool:
     return bool(host)
 
 
-def extract_host_info(url_str: str) -> tuple[str, str, bool]:
+def extract_host_info(url_str: str) -> tuple[str, str, bool, str]:
     normalized = normalize_url(url_str)
     parsed = urlparse(normalized)
     host = parsed.netloc.split("@")[-1]
@@ -281,6 +288,7 @@ def extract_host_info(url_str: str) -> tuple[str, str, bool]:
     has_ip = bool(re.search(r"^\d{1,3}(?:\.\d{1,3}){3}$", host.split(":")[0]))
     protocol = "HTTP (Unencrypted)" if has_http else "HTTPS (TLS Encrypted)"
     return normalized, host, has_ip, protocol
+
 
 
 def build_signals(features: dict[str, int], predicted_class: int, top_n: int = 5) -> list[dict]:
@@ -443,8 +451,11 @@ def analyze():
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(analyze_with_model, url)
             result = future.result(timeout=ANALYZE_TIMEOUT_SECONDS)
-        save_scan(result)
+        scan_id = save_scan(result)
+        if scan_id:
+            result["id"] = scan_id
         return jsonify(result)
+
     except FuturesTimeoutError:
         return jsonify({"error": "Analysis timed out after 8 seconds."}), 504
     except Exception as exc:

@@ -1,5 +1,5 @@
 """
-SQLite Database Layer for SecureIQ Scan Persistence & Analytics
+PostgreSQL (Supabase) & SQLite Database Layer for SecureIQ Scan Persistence & Analytics
 """
 
 import json
@@ -7,32 +7,102 @@ import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 DB_PATH = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "scans.db"))
 
 
+USE_POSTGRES = False
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    USE_POSTGRES = bool(DATABASE_URL and DATABASE_URL.startswith("postgresql"))
+except ImportError:
+    USE_POSTGRES = False
+
+
+class DBWrapper:
+    def __init__(self, conn, is_postgres: bool):
+        self.conn = conn
+        self.is_postgres = is_postgres
+
+    def execute(self, query: str, params: tuple = ()):
+        if self.is_postgres:
+            pg_query = query.replace("?", "%s")
+            cursor = self.conn.cursor(cursor_factory=RealDictCursor)
+            cursor.execute(pg_query, params)
+            return cursor
+        else:
+            return self.conn.execute(query, params)
+
+    def commit(self):
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.conn.rollback()
+        else:
+            self.conn.commit()
+        self.conn.close()
+
+
 def get_db_connection():
+    global USE_POSTGRES
+    if USE_POSTGRES:
+        try:
+            conn = psycopg2.connect(DATABASE_URL)
+            return DBWrapper(conn, is_postgres=True)
+        except Exception as e:
+            print(f"[Database] Warning: Supabase PostgreSQL connection failed: {e}. Falling back to SQLite.")
+    
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    return conn
+    return DBWrapper(conn, is_postgres=False)
 
 
 def init_db():
-    with get_db_connection() as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS scans (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                url TEXT NOT NULL,
-                domain TEXT,
-                verdict TEXT NOT NULL,
-                risk_score INTEGER NOT NULL,
-                confidence REAL NOT NULL,
-                reasons TEXT,
-                scanned_at TEXT NOT NULL
-            );
-            """
-        )
-        conn.commit()
+    with get_db_connection() as db:
+        if db.is_postgres:
+            db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS scans (
+                    id SERIAL PRIMARY KEY,
+                    url TEXT NOT NULL,
+                    domain TEXT,
+                    verdict TEXT NOT NULL,
+                    risk_score INTEGER NOT NULL,
+                    confidence REAL NOT NULL,
+                    reasons TEXT,
+                    scanned_at TEXT NOT NULL
+                );
+                """
+            )
+        else:
+            db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS scans (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT NOT NULL,
+                    domain TEXT,
+                    verdict TEXT NOT NULL,
+                    risk_score INTEGER NOT NULL,
+                    confidence REAL NOT NULL,
+                    reasons TEXT,
+                    scanned_at TEXT NOT NULL
+                );
+                """
+            )
 
 
 def save_scan(scan_dict: dict) -> int:
@@ -49,21 +119,32 @@ def save_scan(scan_dict: dict) -> int:
     if not scanned_at:
         scanned_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    with get_db_connection() as conn:
-        cursor = conn.execute(
-            """
-            INSERT INTO scans (url, domain, verdict, risk_score, confidence, reasons, scanned_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (url, domain, verdict, risk_score, confidence, reasons_json, scanned_at),
-        )
-        conn.commit()
-        return cursor.lastrowid
+    with get_db_connection() as db:
+        if db.is_postgres:
+            cursor = db.execute(
+                """
+                INSERT INTO scans (url, domain, verdict, risk_score, confidence, reasons, scanned_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                RETURNING id
+                """,
+                (url, domain, verdict, risk_score, confidence, reasons_json, scanned_at),
+            )
+            row = cursor.fetchone()
+            return row["id"] if row else 0
+        else:
+            cursor = db.execute(
+                """
+                INSERT INTO scans (url, domain, verdict, risk_score, confidence, reasons, scanned_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (url, domain, verdict, risk_score, confidence, reasons_json, scanned_at),
+            )
+            return cursor.lastrowid
 
 
 def get_scan_by_id(scan_id: int) -> dict | None:
-    with get_db_connection() as conn:
-        cursor = conn.execute(
+    with get_db_connection() as db:
+        cursor = db.execute(
             """
             SELECT id, url, domain, verdict, risk_score, confidence, reasons, scanned_at
             FROM scans
@@ -78,7 +159,7 @@ def get_scan_by_id(scan_id: int) -> dict | None:
         reasons_data = []
         if row["reasons"]:
             try:
-                reasons_data = json.loads(row["reasons"])
+                reasons_data = json.loads(row["reasons"]) if isinstance(row["reasons"], str) else row["reasons"]
             except Exception:
                 reasons_data = []
 
@@ -96,8 +177,8 @@ def get_scan_by_id(scan_id: int) -> dict | None:
 
 
 def get_recent_scans(limit: int = 20) -> list[dict]:
-    with get_db_connection() as conn:
-        cursor = conn.execute(
+    with get_db_connection() as db:
+        cursor = db.execute(
             """
             SELECT id, url, domain, verdict, risk_score, confidence, reasons, scanned_at
             FROM scans
@@ -112,7 +193,7 @@ def get_recent_scans(limit: int = 20) -> list[dict]:
             reasons_data = []
             if row["reasons"]:
                 try:
-                    reasons_data = json.loads(row["reasons"])
+                    reasons_data = json.loads(row["reasons"]) if isinstance(row["reasons"], str) else row["reasons"]
                 except Exception:
                     reasons_data = []
 
@@ -133,8 +214,8 @@ def get_recent_scans(limit: int = 20) -> list[dict]:
 
 
 def get_stats() -> dict:
-    with get_db_connection() as conn:
-        cursor = conn.execute(
+    with get_db_connection() as db:
+        cursor = db.execute(
             """
             SELECT 
                 COUNT(*) as total_scans,
@@ -147,11 +228,11 @@ def get_stats() -> dict:
         )
         row = cursor.fetchone()
 
-        total_scans = row["total_scans"] or 0
-        phishing_count = row["phishing_count"] or 0
-        suspicious_count = row["suspicious_count"] or 0
-        safe_count = row["safe_count"] or 0
-        avg_risk = round(float(row["avg_risk_score"]), 1) if row["avg_risk_score"] is not None else 0.0
+        total_scans = (row["total_scans"] if row and row["total_scans"] else 0) or 0
+        phishing_count = (row["phishing_count"] if row and row["phishing_count"] else 0) or 0
+        suspicious_count = (row["suspicious_count"] if row and row["suspicious_count"] else 0) or 0
+        safe_count = (row["safe_count"] if row and row["safe_count"] else 0) or 0
+        avg_risk = round(float(row["avg_risk_score"]), 1) if (row and row["avg_risk_score"] is not None) else 0.0
 
         return {
             "total_scans": total_scans,
@@ -171,11 +252,11 @@ def get_daily_trend(days: int = 7) -> list[dict]:
         d_str = (today - timedelta(days=i)).strftime("%Y-%m-%d")
         dates_map[d_str] = {"date": d_str, "total": 0, "phishing": 0, "safe": 0}
 
-    with get_db_connection() as conn:
-        cursor = conn.execute(
+    with get_db_connection() as db:
+        cursor = db.execute(
             """
             SELECT 
-                substr(scanned_at, 1, 10) as scan_date,
+                SUBSTR(scanned_at, 1, 10) as scan_date,
                 COUNT(*) as total,
                 SUM(CASE WHEN verdict = 'Phishing' THEN 1 ELSE 0 END) as phishing,
                 SUM(CASE WHEN verdict = 'Safe' THEN 1 ELSE 0 END) as safe
@@ -188,8 +269,8 @@ def get_daily_trend(days: int = 7) -> list[dict]:
         for row in rows:
             s_date = row["scan_date"]
             if s_date in dates_map:
-                dates_map[s_date]["total"] = row["total"] or 0
-                dates_map[s_date]["phishing"] = row["phishing"] or 0
-                dates_map[s_date]["safe"] = row["safe"] or 0
+                dates_map[s_date]["total"] = int(row["total"] or 0)
+                dates_map[s_date]["phishing"] = int(row["phishing"] or 0)
+                dates_map[s_date]["safe"] = int(row["safe"] or 0)
 
     return list(dates_map.values())

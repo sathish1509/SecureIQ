@@ -1,143 +1,203 @@
-# SecureIQ — AI-Powered Threat Intelligence & Phishing Detection Platform
+# SecureIQ — AI-Powered Phishing URL & Email Threat Detection Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://www.python.org/)
 [![React 18](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
+[![Flask](https://img.shields.io/badge/Flask-3.0%2B-red.svg)](https://flask.palletsprojects.org/)
+[![Deploy on Vercel](https://img.shields.io/badge/Vercel-Deployed-black.svg)](https://secure-iq-iwv4.vercel.app)
+[![Deploy on Render](https://img.shields.io/badge/Render-Deployed-informational.svg)](https://secureiq-0g5n.onrender.com/api/health)
 
-**SecureIQ** is an enterprise-grade, AI-powered threat detection platform built for security operations teams and organizational users. It combines a machine learning classification engine, heuristic web analysis, WHOIS domain intelligence, DOM inspection, live multi-vector threat intelligence lookups (URLhaus & VirusTotal), independent email heuristic scanning, and an SQLite scan persistence layer to score suspicious URLs and emails in real-time — delivering a fully explainable risk breakdown.
+> **InnovaHack Chapter-1 Submission** | **Domain:** Cybersecurity — *Phishing & Malicious URL Detector*
 
----
-
-## 📊 Summary of What Has Been Built
-
-### 1. Enterprise UI & Design System
-- **Design Philosophy**: Built around **Enterprise Minimalism / Trust & Authority**. Avoids glassmorphism and ambient glow clutter in favor of crisp 1px borders, solid opaque surfaces, soft restrained shadows, and an 8px layout grid.
-- **Typography & Icons**: Styled with Google Fonts (**Poppins** for headers/navigation, **Inter** for data tables/forms/metrics) paired with **Lucide React** icons.
-- **14 Production Pages**:
-  1. **Landing Page** (`/`): High-converting SaaS landing page with hero CTA, product showcase, 6-feature grid, live proof band, and customer trust section.
-  2. **Login Page** (`/login`): Clean enterprise authentication interface with email/password and single sign-on options.
-  3. **Dashboard** (`/dashboard`): Dynamic security ops command center featuring live KPI metrics, 7-day threat trend chart (SVG/Recharts), inspection logs, and manual refresh telemetry.
-  4. **URL Scanner** (`/scanner`): Real-time URL threat analyzer with step-by-step scan visualization, live progress states, and risk indicators.
-  5. **Scan Report** (`/report`): Fully dynamic assessment report with circular risk gauge, feature importances, SSL status, WHOIS age, threat intel matches, timeline audit, and PDF export/print capabilities.
-  6. **Email Scanner** (`/email-scanner`): Live email header & body analyzer detecting sender spoofing (From/Reply-To mismatch), brand lookalikes (Levenshtein distance), pressure language, generic greetings, CTAs, and embedded ML URL scoring.
-  7. **Scan History** (`/history`): Filterable archive of past URL & Email scans fetched directly from the database.
-  8. **Threat Intelligence** (`/threat-intel`): Live feed of top phishing domains, attack categories (Ransomware, Phishing, Botnet), and regional attack distribution.
-  9. **Browser Extension Popup** (`/extension`): Simulation of the SecureIQ browser extension for instant site checks.
-  10. **Notifications** (`/notifications`): Centralized alert center categorized by Safe, Suspicious, and Dangerous risk levels.
-  11. **Settings** (`/settings`): Profile, security settings, API key management, dark mode, and retention policies.
-  12. **User Profile** (`/profile`): User account details, scan stats, and enterprise organization membership.
-  13. **About Page** (`/about`): Architecture breakdown, mission statement, and detection methodology.
-  14. **Coming Soon / Fallback** (`/coming-soon`): Clean fallback page for upcoming features.
-
-### 2. Python Flask AI Backend, Email Heuristics & SQLite Persistence
-- **Trained RandomForest Classifier**: Pre-trained Scikit-Learn model (`Model/phishing_model.pkl`) evaluating **30 UCI Phishing Website features**.
-- **Independent Email Analyzer (`email_analyzer.py`)**:
-  - **`extract_and_score_urls(email_body)`**: Extracts all embedded URLs from the email body and scores each using the real ML model pipeline (`extract_features` + `MODEL.predict()`).
-  - **`score_email_signals(sender, reply_to, subject, body)`**: Evaluates sender vs. reply-to domain mismatches, brand lookalikes via Levenshtein distance (`paypal`, `amazon`, `microsoft`, etc.), urgency language counts, generic greetings, and credential-harvesting CTAs.
-  - **`combine_email_verdict(url_scores, email_signal_score)`**: Blends embedded ML URL scores with email heuristic sub-scores into an honest, unified verdict.
-- **External Threat Intelligence Integration (`threat_intel.py`)**:
-  - **URLhaus (abuse.ch)**: Queries active malicious URL database with 4s fail-safe timeout. Boosts risk score (+20) when flagged.
-  - **VirusTotal API v3**: Submits and polls analysis results using `VIRUSTOTAL_KEY` with 4s fail-safe timeout. Boosts risk score (+10) when flagged.
-- **SQLite Database Persistence (`database.py`)**:
-  - Automatically initializes `scans.db` and `scans` table on startup (with `scan_type` column distinguishing `url` vs `email` scans).
+SecureIQ is a multi-vector, AI-driven threat intelligence platform built to detect phishing URLs and deceptive emails in real time. By combining a Scikit-Learn **RandomForestClassifier** trained on 30 lexical and structural web features with real-time **URLhaus** and **VirusTotal API v3** lookups, SecureIQ provides actionable, fully explainable threat breakdowns rather than black-box scores.
 
 ---
 
-## 🏗️ Architecture Overview
+## 🌐 Live Deployments
 
-```
-               ┌─────────────────────────────────────────┐
-               │    React 18 + Vite + Tailwind Frontend  │
-               └────────────────────┬────────────────────┘
-                                    │ HTTP REST API
-                                    ▼
-               ┌─────────────────────────────────────────┐
-               │       Python Flask API (app.py)         │
-               └─────────┬──────────────┬────────────────┘
-                         │              │
-        ┌────────────────┼──────────────┼────────────────┐
-        ▼                ▼              ▼                ▼
-┌──────────────┐  ┌────────────┐  ┌────────────┐  ┌─────────────┐
-│ SQLite DB    │  │ ML Model   │  │ ThreatIntel│  │ Email Engine│
-│(database.py) │  │(RandomFor) │  │(URLhaus/VT)│  │(email_analy)│
-└──────────────┘  └────────────┘  └────────────┘  └─────────────┘
-```
+- **Live Web Application (Vercel):** [https://secure-iq-iwv4.vercel.app](https://secure-iq-iwv4.vercel.app)
+- **Live Backend API (Render):** [https://secureiq-0g5n.onrender.com](https://secureiq-0g5n.onrender.com)
+- **API Health Check:** [https://secureiq-0g5n.onrender.com/api/health](https://secureiq-0g5n.onrender.com/api/health)
 
 ---
 
-## 🔌 API Documentation
+## 📋 Table of Contents
 
-### 1. Health Check
-- **Endpoint**: `GET /api/health`
+- [Problem Statement](#-problem-statement)
+- [Key Features](#-key-features)
+- [Tech Stack](#-tech-stack)
+- [System Architecture](#-system-architecture)
+- [How It Works](#-how-it-works)
+- [API Endpoints](#-api-endpoints)
+- [Model Details](#-model-details)
+- [Local Setup](#-local-setup)
+- [Known Limitations](#-known-limitations)
+- [Team Information](#-team-information)
+- [License](#-license)
 
-### 2. System Statistics
-- **Endpoint**: `GET /api/stats`
+---
 
-### 3. Scan History Log
-- **Endpoint**: `GET /api/history?limit=20`
+## 🎯 Problem Statement
 
-### 4. Analyze URL / Threat Scan
-- **Endpoint**: `POST /api/analyze` (or `POST /analyze`)
+Phishing attacks remain the leading entry vector for enterprise security breaches and credential theft. Traditional blocklists struggle to catch zero-day phishing sites, while plain machine-learning models lack real-time threat intelligence cross-referencing and contextual email analysis.
 
-### 5. Analyze Email / Header & Body Scan
-- **Endpoint**: `POST /api/analyze-email`
-- **Request Body**:
-```json
-{
-  "sender": "PayPal Security Team <notice@service-paypal-verify.xyz>",
-  "reply_to": "support@consultant.ru",
-  "subject": "ACTION REQUIRED: Account suspended",
-  "body": "Dear Customer, click here to verify: http://192.168.1.1/paypal/login"
-}
+**SecureIQ** addresses this problem statement by providing:
+1. **Multi-Vector Detection:** Fusing machine learning lexical analysis with live malware threat feeds.
+2. **Explainable Attribution:** Breaking down the specific risk indicators (IP host usage, domain age, typosquatting, urgency language) behind every verdict.
+3. **Email Body & Header Inspection:** Extracting embedded payload links for ML scoring while evaluating header spoofing and brand lookalikes.
+
+---
+
+## ✨ Key Features
+
+- **Real-Time URL Scanning:** Extracts 30 structural, domain, and lexical features to score suspicious links on a `0-100` risk scale.
+- **Multi-Vector Threat Intelligence:** Cross-references submitted targets against **URLhaus (abuse.ch)** and **VirusTotal API v3** (70+ security engines).
+- **Independent Email Analyzer:** Extracts embedded payload links and scores each via the ML model pipeline, alongside heuristic checks for:
+  - Sender vs. Reply-To domain mismatches.
+  - Typosquatting & brand lookalikes (via Levenshtein distance checks for `PayPal`, `Amazon`, `Microsoft`, `Google`, `Apple`, `Bank of America`).
+  - Artificial pressure/urgency phrases (`act now`, `suspended`, `24 hours`, `verify immediately`).
+  - Impersonal generic salutations (`Dear Customer`, `Dear User`).
+  - Credential-harvesting calls-to-action near links.
+- **Explainable Attribution:** Renders individual risk cards detailing exact signals instead of a non-transparent score.
+- **Dynamic Telemetry Timeline:** Measures precise stage-by-stage latency (`t0` to `t4`) via `time.perf_counter()`.
+- **Stateless User Authentication:** JWT-based authentication with `bcrypt` password hashing supporting registered accounts and anonymous scans.
+- **Persistent Analytics Dashboard:** Tracks total scans, detected phishing counts, daily trend charts, and filterable history logs.
+- **Shareable Assessment Reports:** Permalinks accessible at `/report/:scanId` with one-click clipboard copying.
+
+---
+
+## 💻 Tech Stack
+
+| Component | Technology | Description / Role |
+| :--- | :--- | :--- |
+| **Frontend** | React 18, Vite, React Router | Responsive, single-page application with enterprise design system |
+| **Hosting (Frontend)** | Vercel | Production CDN hosting with wildcard route rewrites (`vercel.json`) |
+| **Backend** | Python 3.10+, Flask, Gunicorn | REST API serving inference, heuristics, threat lookups, and auth |
+| **Hosting (Backend)** | Render | WSGI web service deployment with CORS configuration (`Procfile`, `render.yaml`) |
+| **Machine Learning** | Scikit-learn, Pandas, Joblib | RandomForestClassifier trained on 30 URL features |
+| **Threat Intelligence**| URLhaus API, VirusTotal v3 API | Real-time external reputation lookups with 4s fail-safe timeouts |
+| **Database** | SQLite3 / PostgreSQL | Persistent scan history and user account storage |
+| **Auth & Security** | PyJWT, bcrypt | Stateless 24-hour Bearer JWT authentication & salted password hashing |
+
+---
+
+## 🏗️ System Architecture
+
 ```
-- **Sample Response**:
-```json
-{
-  "url": "ACTION REQUIRED: Account suspended",
-  "domain": "service-paypal-verify.xyz",
-  "sender": "PayPal Security Team <notice@service-paypal-verify.xyz>",
-  "subject": "ACTION REQUIRED: Account suspended",
-  "verdict": "Phishing",
-  "verdict_level": "danger",
-  "risk_score": 100,
-  "confidence": 0.95,
-  "scan_type": "email",
-  "signals": [
-    {
-      "title": "Sender / Reply-To Domain Mismatch",
-      "category": "Header Spoofing",
-      "risk": "high",
-      "description": "Sender domain ('service-paypal-verify.xyz') differs from Reply-To domain ('consultant.ru')."
-    },
-    {
-      "title": "Brand Keyword Positioning (Paypal)",
-      "category": "Domain Intelligence",
-      "risk": "medium",
-      "description": "Sender domain label 'service-paypal-verify' embeds brand name 'paypal'."
-    }
-  ],
-  "sources_checked": [
-    "Email Heuristics",
-    "ML Model (embedded URL)"
-  ]
-}
+                      ┌───────────────────────────────────────┐
+                      │      React 18 SPA (Vercel CDN)        │
+                      └───────────────────┬───────────────────┘
+                                          │ HTTP REST API (JWT Bearer)
+                                          ▼
+                      ┌───────────────────────────────────────┐
+                      │    Python Flask API (Render WSGI)     │
+                      └─────┬─────────────┬─────────────┬─────┘
+                            │             │             │
+        ┌───────────────────┘             │             └───────────────────┐
+        ▼                                 ▼                                 ▼
+┌──────────────┐                 ┌─────────────────┐               ┌──────────────────┐
+│  SQLite DB   │                 │ Scikit-Learn ML │               │ Threat Intel APIs│
+│ (scans.db)   │                 │ (RandomForest)  │               │ (URLhaus + VT)   │
+└──────────────┘                 └─────────────────┘               └──────────────────┘
 ```
 
 ---
 
-## 🐳 Dockerization (Backend & Fullstack)
+## ⚙️ How It Works
 
-The backend and database services are containerized using Docker, persistent named volumes, and production-ready WSGI server (**Gunicorn**).
+1. **Submission & Feature Extraction (`t0` - `t1`):** User submits a URL or raw email text. For URLs, `feature_extractor.py` extracts 30 features (IP host detection, scheme, length, subdomains, WHOIS age, etc.). For emails, `email_analyzer.py` extracts embedded URLs and evaluates header fields.
+2. **ML Model Inference (`t1` - `t2`):** The 30-feature vector is fed into `phishing_model.pkl` (`RandomForestClassifier`), generating a baseline probability score and verdict (`Phishing` vs `Safe`).
+3. **Multi-Vector Threat Intelligence (`t2` - `t3`):** Target URLs are queried against URLhaus and VirusTotal v3 APIs via `threat_intel.py`. Confirmed detections add weighted risk boosts (`+20` for URLhaus, `+10` for VirusTotal).
+4. **Verdict Blending & Timeline Telemetry (`t3` - `t4`):** Risk scores are blended, explainable signal cards are compiled, and high-resolution timing counters compute stage latency.
+5. **Persistence & Presentation (`t4`):** The scan record is saved to SQLite (`scans.db`) and returned to the React frontend for display in the command dashboard or detailed assessment report.
 
-### Option A: Running Backend Standalone with Docker Compose (Recommended)
+---
 
+## 🔌 API Endpoints
+
+| Method | Endpoint | Description | Auth |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/health` | Backend engine health and ML model status check | Public |
+| `POST` | `/api/analyze` | Scans a target URL and returns blended risk score, signals, and timing | Optional |
+| `POST` | `/api/analyze-email` | Analyzes email text, extracts embedded URLs, and checks headers | Optional |
+| `GET` | `/api/stats` | Fetches aggregate scan counts, phishing detections, and average risk | Optional |
+| `GET` | `/api/history` | Returns recent scan log records (filtered by user if authenticated) | Optional |
+| `GET` | `/api/trend` | Returns 7-day scan and threat count trend metrics | Public |
+| `GET` | `/api/scan/<id>` | Retrieves a single saved scan report by ID | Public |
+| `POST` | `/api/auth/register` | Registers a new user account and returns a 24-hour JWT token | Public |
+| `POST` | `/api/auth/login` | Authenticates email/password credentials and returns a JWT token | Public |
+| `GET` | `/api/auth/me` | Fetches authenticated user account details | Required |
+
+---
+
+## 🤖 Model Details
+
+- **Dataset:** [UCI Phishing Websites Dataset](https://archive.ics.uci.edu/ml/datasets/phishing+websites)
+- **Sample Size:** ~11,000 web page samples (balanced phishing & safe URLs)
+- **Features (30):** `UsingIP`, `LongURL`, `ShortURL`, `Symbol@`, `Redirecting//`, `PrefixSuffix-`, `SubDomains`, `HTTPS`, `DomainRegLen`, `Favicon`, `NonStdPort`, `HTTPSDomainURL`, `RequestURL`, `AnchorURL`, `LinksInScriptTags`, `ServerFormHandler`, `InfoEmail`, `AbnormalURL`, `WebsiteForwarding`, `StatusBarCust`, `DisableRightClick`, `UsingPopupWindow`, `IframeRedirection`, `AgeofDomain`, `DNSRecording`, `WebsiteTraffic`, `PageRank`, `GoogleIndex`, `LinksPointingToPage`, `StatsReport`.
+- **Classifier:** Scikit-Learn `RandomForestClassifier` (100 estimators)
+- **Model File:** `Model/phishing_model.pkl`
+
+---
+
+## 🛠️ Local Setup
+
+### Prerequisites
+- Python 3.10+
+- Node.js 18+ & npm
+
+### 1. Backend Setup (Python Flask)
 ```bash
-docker-compose up -d --build
+# Clone the repository
+git clone https://github.com/sathish1509/SecureIQ.git
+cd SecureIQ
+
+# Create a virtual environment (optional but recommended)
+python -m venv venv
+# On Windows: venv\Scripts\activate | On macOS/Linux: source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create environment configuration
+cp .env.example .env
+
+# Run the Flask backend development server
+python app.py
 ```
+*The backend API will run locally at `http://localhost:5000`.*
+
+### 2. Frontend Setup (React / Vite)
+```bash
+# In the project root directory
+npm install
+
+# Start the Vite development server
+npm run dev
+```
+*The React frontend will run locally at `http://localhost:3000` (or `http://localhost:5173`).*
 
 ---
 
-## 🛡️ License
+## ⚠️ Known Limitations
 
-Distributed under the MIT License. See `LICENSE` for more details.
+1. **Static Reputation Fallbacks:** 5 out of the 30 UCI features (`WebsiteTraffic`, `PageRank`, `GoogleIndex`, `LinksPointingToPage`, `StatsReport`) fall back to neutral values during live scanning because commercial Alexa/PageRank live lookup APIs require paid enterprise subscriptions.
+2. **Render Free-Tier Cold Starts:** The backend API hosted on Render's free tier spins down after inactivity. The first request after a sleep period may take ~30–50 seconds to complete while the container boots.
+3. **URLhaus & VirusTotal API Rate Limits:** VirusTotal v3 free API keys have a rate limit of 4 requests/minute. If exceeded, the fail-safe fallback gracefully relies on the ML model without crashing the scan.
+
+---
+
+## 👥 Team Information
+
+- **Team Name:** [Insert Team Name]
+- **Team Leader:** Sathish Kumar ([@sathish1509](https://github.com/sathish1509))
+- **Team Members:**
+  - Varshan ([@Varshan](https://github.com/))
+  - [Member 2]
+  - [Member 3]
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

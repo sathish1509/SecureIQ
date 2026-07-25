@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Variables & Design System Fallbacks */
+:root {
+    --bg-page: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-subtle: #f1f5f9;
+    --bg-hover: #e2e8f0;
+    
+    --border-color: #cbd5e1;
+    --border-subtle: #e2e8f0;
+    --border-strong: #94a3b8;
+
+    --text-main: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --text-inverse: #ffffff;
+
+    --accent-navy: #0f172a;
+    --accent-blue: #1e40af;
+    --accent-blue-hover: #1d4ed8;
+    --accent-focus-ring: rgba(30, 64, 175, 0.25);
+
+    --status-safe-bg: #ecfdf5;
+    --status-safe-text: #065f46;
+    --status-safe-border: #a7f3d0;
+    --status-safe-fill: #10b981;
+
+    --status-warn-bg: #fffbeb;
+    --status-warn-text: #92400e;
+    --status-warn-border: #fde68a;
+    --status-warn-fill: #f59e0b;
+
+    --status-danger-bg: #fef2f2;
+    --status-danger-text: #991b1b;
+    --status-danger-border: #fca5a5;
+    --status-danger-fill: #ef4444;
+
+    --font-heading: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "SF Mono", "Cascadia Code", "Roboto Mono", Consolas, Monaco, monospace;
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+
+    --radius-sm: 2px;
+    --radius-md: 4px;
+
+    --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+}
+
+.mono-text {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+}
+
+/* Custom Component Utilities */
+.btn-primary {
+    @apply inline-flex items-center justify-center gap-2 h-10 px-5 bg-navy text-white font-heading text-sm font-semibold rounded-md border border-navy hover:bg-navy-light transition-colors cursor-pointer no-underline;
+}
+.btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 h-10 px-5 bg-surface text-brandText-main font-heading text-sm font-semibold rounded-md border border-brandBorder hover:bg-subtle hover:border-brandBorder-strong transition-colors cursor-pointer no-underline;
+}
+.btn-outline {
+    @apply inline-flex items-center justify-center gap-2 h-10 px-4 bg-transparent text-brandText-secondary font-heading text-sm font-medium rounded-md border border-brandBorder hover:bg-subtle hover:text-brandText-main transition-colors cursor-pointer no-underline;
+}
+.btn-sm {
+    @apply h-8 px-3 text-xs;
+}
+.btn-lg {
+    @apply h-12 px-6 text-base;
+}
+
+.verdict-badge {
+    @apply inline-block px-2.5 py-1 text-xs font-bold tracking-wider uppercase rounded-sm border;
+}
+.badge-neutral {
+    @apply bg-subtle text-brandText-muted border-brandBorder;
+}
+.badge-safe {
+    @apply bg-safe-bg text-safe-text border-safe-border;
+}
+.badge-warning {
+    @apply bg-warn-bg text-warn-text border-warn-border;
+}
+.badge-danger {
+    @apply bg-danger-bg text-danger-text border-danger-border;
+}
+
+.risk-tag {
+    @apply inline-block px-2 py-0.5 text-xs font-bold uppercase tracking-wider rounded-sm border;
+}
+.risk-tag.risk-high {
+    @apply bg-danger-bg text-danger-text border-danger-border;
+}
+.risk-tag.risk-medium {
+    @apply bg-warn-bg text-warn-text border-warn-border;
+}
+.risk-tag.risk-low {
+    @apply bg-subtle text-brandText-secondary border-brandBorder;
+}
+.risk-tag.risk-safe {
+    @apply bg-safe-bg text-safe-text border-safe-border;
+}
+
+.signals-container {
+    @apply bg-surface border border-brandBorder rounded-md shadow-sm overflow-hidden;
+}
+.signals-header {
+    @apply px-6 py-4 border-b border-brandBorder bg-subtle flex items-center justify-between;
+}
+.signals-title {
+    @apply font-heading text-base font-semibold text-brandText-main;
+}
+.signals-count {
+    @apply text-xs font-semibold font-mono text-brandText-muted bg-surface border border-brandBorder px-2 py-0.5 rounded-sm;
+}
+
+.table-wrapper {
+    @apply w-full overflow-x-auto;
+}
+.signals-table {
+    @apply w-full border-collapse text-left text-sm;
+}
+.signals-table th {
+    @apply bg-surface text-brandText-muted text-xs font-bold uppercase tracking-wider px-6 py-3 border-b border-brandBorder;
+}
+.signals-table td {
+    @apply px-6 py-4 border-b border-brandBorder-subtle text-brandText-secondary align-top;
+}
+.signals-table tbody tr:hover {
+    @apply bg-slate-50;
+}
+
+.score-number {
+    @apply font-heading font-bold leading-none text-brandText-main;
+}
+.score-scale {
+    @apply text-base font-medium text-brandText-muted;
+}
+.score-meter-track {
+    @apply h-2 bg-slate-200 rounded-sm overflow-hidden;
+}
+.score-meter-fill {
+    @apply h-full transition-all duration-300;
+}
+.score-meter-fill.meter-safe {
+    @apply bg-safe-fill;
+}
+.score-meter-fill.meter-warning {
+    @apply bg-warn-fill;
+}
+.score-meter-fill.meter-danger {
+    @apply bg-danger-fill;
+}
+
+.app-dashboard-shell {
+    @apply grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 items-start;
+}
+.app-sidebar {
+    @apply bg-surface border border-brandBorder rounded-md p-4 shadow-sm flex flex-col gap-4 sticky top-20;
+}
+.sidebar-section-title {
+    @apply text-xs font-bold uppercase tracking-wider text-brandText-muted px-3 mb-1;
+}
+.sidebar-menu {
+    @apply flex flex-col gap-0.5;
+}
+.sidebar-menu-item {
+    @apply flex items-center gap-3 px-3 py-2 text-sm font-medium text-brandText-secondary rounded-sm hover:bg-subtle hover:text-brandText-main transition-colors no-underline;
+}
+.sidebar-menu-item.active {
+    @apply bg-subtle text-accentBlue font-semibold border-l-2 border-accentBlue;
+}

@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  secureiq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: secureiq-app
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    environment:
+      - PORT=5000

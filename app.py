@@ -18,6 +18,7 @@ from flask import Flask, jsonify, request, send_from_directory
 
 from feature_extractor import extract_features
 from database import init_db, save_scan, get_recent_scans, get_stats, get_daily_trend, get_scan_by_id
+from threat_intel import check_urlhaus, check_virustotal
 
 app = Flask(__name__, static_folder="dist", static_url_path="")
 
@@ -37,7 +38,7 @@ except ImportError:
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "Model", "phishing_model.pkl")
 FEATURE_COLUMNS_PATH = os.path.join(os.path.dirname(__file__), "Model", "feature_columns.pkl")
-ANALYZE_TIMEOUT_SECONDS = 8
+ANALYZE_TIMEOUT_SECONDS = 12
 START_TIME = time.monotonic()
 
 MODEL = joblib.load(MODEL_PATH)
@@ -345,6 +346,50 @@ def build_signals(features: dict[str, int], predicted_class: int, top_n: int = 5
     return signals
 
 
+def combine_verdict(
+    ml_risk_score: int,
+    ml_confidence: float,
+    urlhaus_result: dict | None,
+    virustotal_result: dict | None,
+) -> tuple[int, str, str]:
+    """
+    Multi-vector verdict blending function.
+    Combines the RandomForest ML model's risk prediction score with live external threat intelligence lookups.
+
+    Blending Weights / Boosts:
+    - Starts with ml_risk_score (0-100) from the RandomForest model.
+    - URLhaus match (+20): URLhaus (abuse.ch) stores active, confirmed malicious URLs.
+    - VirusTotal match (+10): VirusTotal flags from multiple security engines.
+    - Cap final risk score at 100.
+
+    Classification Thresholds:
+    - score >= 70 -> "Phishing" (danger)
+    - score >= 40 -> "Suspicious" (warning)
+    - score < 40  -> "Safe" (success)
+    """
+    final_score = ml_risk_score
+
+    if urlhaus_result and urlhaus_result.get("flagged"):
+        final_score += 20
+
+    if virustotal_result and virustotal_result.get("flagged"):
+        final_score += 10
+
+    final_score = min(100, max(0, final_score))
+
+    if final_score >= 70:
+        verdict = "Phishing"
+        verdict_level = "danger"
+    elif final_score >= 40:
+        verdict = "Suspicious"
+        verdict_level = "warning"
+    else:
+        verdict = "Safe"
+        verdict_level = "success"
+
+    return final_score, verdict, verdict_level
+
+
 def analyze_with_model(url_str: str) -> dict:
     normalized, host, has_ip, protocol = extract_host_info(url_str)
     features = extract_features(normalized)
@@ -354,31 +399,63 @@ def analyze_with_model(url_str: str) -> dict:
     probabilities = MODEL.predict_proba(row)[0]
     phishing_probability = float(probabilities[PHISHING_CLASS_INDEX])
     confidence = float(max(probabilities))
-    risk_score = int(round(phishing_probability * 100))
-
-    if risk_score >= 70:
-        verdict = "Phishing"
-        verdict_level = "danger"
-    elif risk_score >= 40:
-        verdict = "Suspicious"
-        verdict_level = "warning"
-    else:
-        verdict = "Safe"
-        verdict_level = "success"
+    ml_risk_score = int(round(phishing_probability * 100))
 
     signals = build_signals(features, prediction)
+
+    # Perform external threat intelligence lookups (fail-safe, returns None on failure/timeout)
+    urlhaus_res = check_urlhaus(normalized)
+    vt_res = check_virustotal(normalized)
+
+    # Blend ML prediction with threat intelligence lookups
+    final_risk_score, verdict, verdict_level = combine_verdict(
+        ml_risk_score, confidence, urlhaus_res, vt_res
+    )
+
+    # Track which sources ran successfully (not None)
+    sources_checked = ["ML Model"]
+
+    if urlhaus_res is not None:
+        sources_checked.append("URLhaus")
+        if urlhaus_res.get("flagged"):
+            threat_type = urlhaus_res.get("threat_type") or "malware_download"
+            signals.insert(
+                0,
+                {
+                    "title": "Confirmed Malicious by URLhaus (abuse.ch)",
+                    "category": "Threat Intelligence",
+                    "risk": "high",
+                    "description": f"Confirmed malicious by URLhaus (abuse.ch): {threat_type}",
+                },
+            )
+
+    if vt_res is not None:
+        sources_checked.append("VirusTotal")
+        if vt_res.get("flagged"):
+            mal_count = vt_res.get("malicious_count", 0)
+            total_eng = vt_res.get("total_engines", 0)
+            signals.insert(
+                0,
+                {
+                    "title": "VirusTotal Detection Flagged",
+                    "category": "Threat Intelligence",
+                    "risk": "high",
+                    "description": f"{mal_count}/{total_eng} security engines flag this URL as malicious on VirusTotal",
+                },
+            )
 
     return {
         "url": normalized,
         "domain": host,
         "protocol": protocol,
         "ip_detected": "Yes" if has_ip else "No",
-        "risk_score": risk_score,
+        "risk_score": final_risk_score,
         "verdict": verdict,
         "verdict_level": verdict_level,
         "analyzed_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         "confidence": confidence,
         "signals": signals,
+        "sources_checked": sources_checked,
     }
 
 

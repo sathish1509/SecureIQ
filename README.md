@@ -5,7 +5,7 @@
 [![React 18](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 
-**SecureIQ** is an enterprise-grade, AI-powered threat detection platform built for security operations teams and organizational users. It combines a machine learning classification engine, heuristic web analysis, WHOIS domain intelligence, DOM inspection, and an SQLite scan persistence layer to score suspicious URLs in real-time — delivering a fully explainable risk breakdown.
+**SecureIQ** is an enterprise-grade, AI-powered threat detection platform built for security operations teams and organizational users. It combines a machine learning classification engine, heuristic web analysis, WHOIS domain intelligence, DOM inspection, live multi-vector threat intelligence lookups (URLhaus & VirusTotal), and an SQLite scan persistence layer to score suspicious URLs in real-time — delivering a fully explainable risk breakdown.
 
 ---
 
@@ -30,8 +30,13 @@
   13. **About Page** (`/about`): Architecture breakdown, mission statement, and detection methodology.
   14. **Coming Soon / Fallback** (`/coming-soon`): Clean fallback page for upcoming features.
 
-### 2. Python Flask AI Backend, SQLite Persistence & Feature Extractor
+### 2. Python Flask AI Backend, Threat Intel & SQLite Persistence
 - **Trained RandomForest Classifier**: Pre-trained Scikit-Learn model (`Model/phishing_model.pkl`) evaluating **30 UCI Phishing Website features**.
+- **External Threat Intelligence Integration (`threat_intel.py`)**:
+  - **URLhaus (abuse.ch)**: Queries active malicious URL database via POST API with 4s fail-safe timeout. Boosts risk score (+20) when flagged.
+  - **VirusTotal API v3**: Submits and polls analysis results using `VIRUSTOTAL_KEY` with 4s fail-safe timeout. Boosts risk score (+10) when flagged.
+  - **Multi-Vector Blending (`combine_verdict`)**: Combines ML risk prediction with external threat intelligence flags into a unified score capped at 100.
+  - **Fail-Safe Fallback**: If external APIs fail or time out, the backend gracefully falls back to the ML model's prediction without breaking requests.
 - **SQLite Database Persistence (`database.py`)**:
   - Automatically initializes `scans.db` and `scans` table on startup.
   - Persists target URLs, extracted host domain, verdict (`Phishing`, `Suspicious`, `Safe`), risk score (0-100), confidence, signal reasons, and ISO timestamps.
@@ -40,7 +45,6 @@
   - **Lexical Analysis**: IP literal host check, long URL detection, shortener domain resolution (`bit.ly`, `t.co`, etc.), '@' symbol abuse, hyphenated domain labels, subdomain depth, and `https` token misuse.
   - **Domain Intelligence**: Thread-safe WHOIS lookups for domain creation date, expiration period, domain age (>180 days check), and DNS record availability.
   - **DOM & Page Content Parser**: Live HTTP fetching using BeautifulSoup4 to detect cross-domain favicons, non-standard port usage (outside 80/443), external resource link ratios (`RequestURL`, `AnchorURL`), embedded links in script tags, off-domain form handlers, mailto form submissions, cross-domain forwarding, and iframe redirections.
-- **Explainable Risk Engine**: Maps model feature importances to concrete human-readable risk signals (High, Medium, Safe) to eliminate black-box prediction ambiguity.
 
 ---
 
@@ -54,13 +58,14 @@
                                     ▼
                ┌─────────────────────────────────────────┐
                │       Python Flask API (app.py)         │
-               └───────────┬─────────────────┬───────────┘
-                           │                 │
-                           ▼                 ▼
-             ┌────────────────────────┐  ┌────────────────────────┐
-             │ SQLite Storage         │  │ RandomForest Model     │
-             │ (database.py / scans.db│  │ (Model/phishing_model) │
-             └────────────────────────┘  └────────────────────────┘
+               └─────────┬──────────────┬────────────────┘
+                         │              │
+           ┌─────────────┴──┐      ┌────┴───────────────┐
+           ▼                ▼      ▼                    ▼
+   ┌──────────────┐  ┌───────────┐ ┌───────────────┐  ┌─────────────┐
+   │ SQLite DB    │  │ ML Model  │ │ URLhaus API   │  │ VirusTotal  │
+   │(database.py) │  │(RandomFor)│ │ (abuse.ch)    │  │ (API v3)    │
+   └──────────────┘  └───────────┘ └───────────────┘  └─────────────┘
 ```
 
 ---
@@ -119,18 +124,29 @@
   "domain": "example-phishing-domain.com",
   "protocol": "HTTPS (TLS Encrypted)",
   "ip_detected": "No",
-  "risk_score": 85,
+  "risk_score": 95,
   "verdict": "Phishing",
   "verdict_level": "danger",
   "confidence": 0.89,
   "analyzed_at": "2026-07-25 13:40:00 UTC",
   "signals": [
     {
-      "title": "Short Domain Registration Period",
-      "category": "Domain Intelligence",
+      "title": "Confirmed Malicious by URLhaus (abuse.ch)",
+      "category": "Threat Intelligence",
       "risk": "high",
-      "description": "Domain registration length is shorter than typical legitimate sites."
+      "description": "Confirmed malicious by URLhaus (abuse.ch): malware_download"
+    },
+    {
+      "title": "VirusTotal Detection Flagged",
+      "category": "Threat Intelligence",
+      "risk": "high",
+      "description": "12/70 security engines flag this URL as malicious on VirusTotal"
     }
+  ],
+  "sources_checked": [
+    "ML Model",
+    "URLhaus",
+    "VirusTotal"
   ]
 }
 ```
@@ -165,7 +181,7 @@ The backend and database services are containerized using Docker, persistent nam
    ```
 2. **Run Container with Volume**:
    ```bash
-   docker run -d -p 5000:5000 --name secureiq-backend -e PORT=5000 -e CORS_ORIGINS="*" -v secureiq_data:/app/data secureiq-backend
+   docker run -d -p 5000:5000 --name secureiq-backend -e PORT=5000 -e CORS_ORIGINS="*" -e VIRUSTOTAL_KEY="your_key" -v secureiq_data:/app/data secureiq-backend
    ```
 
 ### Option C: Multi-Stage Unified Container (React SPA + Python Flask)
@@ -192,6 +208,9 @@ The backend and database services are containerized using Docker, persistent nam
 # Install Python dependencies
 pip install -r requirements.txt
 
+# Copy environment template
+cp .env.example .env
+
 # Start Flask development server
 python app.py
 ```
@@ -215,8 +234,10 @@ The React frontend will start on `http://localhost:5173`.
 SecureIQ/
 ├── app.py                      # Flask REST API server & Gunicorn entrypoint
 ├── database.py                 # SQLite database persistence layer (scans.db)
+├── threat_intel.py             # URLhaus & VirusTotal v3 API threat intelligence
 ├── feature_extractor.py        # 30-feature UCI phishing extraction engine
 ├── requirements.txt            # Python backend dependencies
+├── .env.example                # Environment variables template
 ├── Dockerfile                  # Multi-stage Dockerfile (React SPA + Flask)
 ├── Dockerfile.backend          # Dedicated standalone backend Dockerfile
 ├── docker-compose.yml          # Docker Compose orchestration & data volume

@@ -29,10 +29,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy Python application code, DB persistence layer & ML model assets
+# Copy Python application code, DB persistence layer, Threat Intel module & ML model assets
 COPY app.py ./
 COPY database.py ./
 COPY feature_extractor.py ./
+COPY threat_intel.py ./
 COPY Model/ ./Model/
 
 # Copy built React static assets from Stage 1 into Flask static folder

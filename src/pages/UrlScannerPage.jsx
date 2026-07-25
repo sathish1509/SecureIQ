@@ -143,7 +143,7 @@ export default function UrlScannerPage() {
               SCAN REPORT #<span className="font-mono">8F39A1</span>
             </div>
             <div className="flex gap-2">
-              <Link to="/report" className="btn-primary btn-sm">Full Report View →</Link>
+              <Link to="/report" state={{ scanData: scanResult }} className="btn-primary btn-sm">Full Report View →</Link>
               <button type="button" className="btn-outline btn-sm" onClick={() => window.print()}>Print PDF</button>
             </div>
           </div>

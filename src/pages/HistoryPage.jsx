@@ -1,37 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { timeAgo } from '../utils/timeAgo';
 
 export default function HistoryPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const logs = [
-    { url: 'http://192.168.1.1/paypal/verify-account.login.xyz', verdict: 'malicious', badge: 'badge-danger', badgeText: 'Malicious', score: '94 / 100', scoreClass: 'risk-high', signal: 'Raw IP Address + Typosquatting TLD', time: '2026-07-25 11:04:12 UTC' },
-    { url: 'http://secure-update-banking-verification.com/login', verdict: 'suspicious', badge: 'badge-warning', badgeText: 'Suspicious', score: '62 / 100', scoreClass: 'risk-medium', signal: 'Targeted Credential Keywords', time: '2026-07-25 10:58:30 UTC' },
-    { url: 'https://github.com/security-advisories', verdict: 'safe', badge: 'badge-safe', badgeText: 'Safe', score: '08 / 100', scoreClass: 'risk-safe', time: '2026-07-25 10:45:15 UTC' },
-    { url: 'http://free-apple-giftcard-claim.tk/auth', verdict: 'malicious', badge: 'badge-danger', badgeText: 'Malicious', score: '88 / 100', scoreClass: 'risk-high', signal: 'Zero-Day Phishing Heuristic Match', time: '2026-07-25 10:12:04 UTC' },
-    { url: 'https://google.com', verdict: 'safe', badge: 'badge-safe', badgeText: 'Safe', score: '04 / 100', scoreClass: 'risk-safe', signal: 'Verified Domain Authority', time: '2026-07-25 09:30:00 UTC' },
-    { url: 'http://account-recovery-portal.net/signin', verdict: 'suspicious', badge: 'badge-warning', badgeText: 'Suspicious', score: '54 / 100', scoreClass: 'risk-medium', signal: 'Young Domain Registration (< 5 days)', time: '2026-07-24 18:22:10 UTC' },
-    { url: 'http://bit.ly/3xY9P1k-fake-auth', verdict: 'malicious', badge: 'badge-danger', badgeText: 'Malicious', score: '92 / 100', scoreClass: 'risk-high', signal: 'Shortener Obfuscation & Redirect Chain', time: '2026-07-24 15:40:02 UTC' }
-  ];
+  useEffect(() => {
+    fetch('/api/history?limit=100')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        setLogs(Array.isArray(data) ? data : []);
+      })
+      .catch(err => console.error('Error loading scan history:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const getVerdictBadge = (verdict) => {
+    const v = (verdict || '').toLowerCase();
+    if (v === 'phishing' || v === 'malicious') return { badge: 'badge-danger', text: 'Phishing' };
+    if (v === 'suspicious') return { badge: 'badge-warning', text: 'Suspicious' };
+    return { badge: 'badge-safe', text: 'Safe' };
+  };
+
+  const getRiskScoreClass = (score) => {
+    const s = Number(score) || 0;
+    if (s >= 70) return 'risk-high';
+    if (s >= 40) return 'risk-medium';
+    return 'risk-safe';
+  };
+
+  const getPrimarySignal = (log) => {
+    if (log.reasons && log.reasons.length > 0) return log.reasons[0].title || log.reasons[0].category;
+    if (log.signals && log.signals.length > 0) return log.signals[0].title || log.signals[0].category;
+    return log.verdict === 'Phishing' ? 'ML Phishing Vector' : 'Verified Domain Host';
+  };
 
   const filteredLogs = logs.filter((log) => {
-    const matchesFilter = filter === 'all' || log.verdict === filter;
-    const matchesSearch = log.url.toLowerCase().includes(search.toLowerCase()) || (log.signal && log.signal.toLowerCase().includes(search.toLowerCase()));
+    const v = (log.verdict || '').toLowerCase();
+    const matchesFilter = 
+      filter === 'all' || 
+      (filter === 'safe' && v === 'safe') ||
+      (filter === 'suspicious' && v === 'suspicious') ||
+      (filter === 'malicious' && (v === 'phishing' || v === 'malicious'));
+
+    const searchLower = search.toLowerCase();
+    const signalText = getPrimarySignal(log).toLowerCase();
+    const matchesSearch = log.url.toLowerCase().includes(searchLower) || signalText.includes(searchLower);
+    
     return matchesFilter && matchesSearch;
   });
+
+  const safeCount = logs.filter(l => (l.verdict || '').toLowerCase() === 'safe').length;
+  const suspiciousCount = logs.filter(l => (l.verdict || '').toLowerCase() === 'suspicious').length;
+  const maliciousCount = logs.filter(l => ['phishing', 'malicious'].includes((l.verdict || '').toLowerCase())).length;
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h1 className="font-heading text-2xl font-semibold text-brandText-main mb-0.5">Inspection History Log</h1>
-          <p className="text-sm text-brandText-muted">Audit trail of all URLs, domains, and emails analyzed by the SecureIQ engine.</p>
+          <p className="text-sm text-brandText-muted">Audit trail of all URLs and domains analyzed by the SecureIQ engine.</p>
         </div>
         <div className="flex gap-2">
           <button className="btn-primary btn-sm" onClick={() => navigate('/scanner')}>+ Scan New Target</button>
-          <button className="btn-secondary btn-sm" onClick={() => alert('Exporting CSV log of past 500 scans...')}>📥 Export CSV</button>
         </div>
       </div>
 
@@ -39,10 +74,10 @@ export default function HistoryPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-brandText-muted uppercase tracking-wider">Filter by Verdict:</span>
-            <button className={`px-3 py-1 text-xs font-medium border rounded-sm ${filter === 'all' ? 'bg-navy text-white border-navy' : 'bg-surface text-brandText-secondary border-brandBorder'}`} onClick={() => setFilter('all')}>All (2,491)</button>
-            <button className={`px-3 py-1 text-xs font-medium border rounded-sm ${filter === 'safe' ? 'bg-navy text-white border-navy' : 'bg-surface text-brandText-secondary border-brandBorder'}`} onClick={() => setFilter('safe')}>Safe (1,850)</button>
-            <button className={`px-3 py-1 text-xs font-medium border rounded-sm ${filter === 'suspicious' ? 'bg-navy text-white border-navy' : 'bg-surface text-brandText-secondary border-brandBorder'}`} onClick={() => setFilter('suspicious')}>Suspicious (420)</button>
-            <button className={`px-3 py-1 text-xs font-medium border rounded-sm ${filter === 'malicious' ? 'bg-navy text-white border-navy' : 'bg-surface text-brandText-secondary border-brandBorder'}`} onClick={() => setFilter('malicious')}>Malicious (221)</button>
+            <button className={`px-3 py-1 text-xs font-medium border rounded-sm cursor-pointer ${filter === 'all' ? 'bg-navy text-white border-navy' : 'bg-surface text-brandText-secondary border-brandBorder'}`} onClick={() => setFilter('all')}>All ({logs.length})</button>
+            <button className={`px-3 py-1 text-xs font-medium border rounded-sm cursor-pointer ${filter === 'safe' ? 'bg-navy text-white border-navy' : 'bg-surface text-brandText-secondary border-brandBorder'}`} onClick={() => setFilter('safe')}>Safe ({safeCount})</button>
+            <button className={`px-3 py-1 text-xs font-medium border rounded-sm cursor-pointer ${filter === 'suspicious' ? 'bg-navy text-white border-navy' : 'bg-surface text-brandText-secondary border-brandBorder'}`} onClick={() => setFilter('suspicious')}>Suspicious ({suspiciousCount})</button>
+            <button className={`px-3 py-1 text-xs font-medium border rounded-sm cursor-pointer ${filter === 'malicious' ? 'bg-navy text-white border-navy' : 'bg-surface text-brandText-secondary border-brandBorder'}`} onClick={() => setFilter('malicious')}>Phishing ({maliciousCount})</button>
           </div>
 
           <div className="flex gap-3 items-center flex-1 max-w-[400px]">
@@ -50,7 +85,7 @@ export default function HistoryPage() {
               type="search" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search URL, domain, or keyword..." 
+              placeholder="Search URL, domain, or signal..." 
               className="h-9 px-3 w-full font-body text-xs text-brandText-main bg-surface border border-brandBorder-strong rounded-md focus:outline-none focus:border-accentBlue"
             />
           </div>
@@ -58,30 +93,49 @@ export default function HistoryPage() {
       </div>
 
       <div className="signals-container">
-        <div className="table-wrapper">
-          <table className="signals-table">
-            <thead>
-              <tr>
-                <th style={{ width: '35%' }}>Analyzed Target / URL</th>
-                <th style={{ width: '15%' }}>Verdict</th>
-                <th style={{ width: '12%' }}>Risk Score</th>
-                <th style={{ width: '20%' }}>Top Triggered Signal</th>
-                <th style={{ width: '18%' }}>Timestamp</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.map((log, idx) => (
-                <tr key={idx} className="cursor-pointer" onClick={() => navigate('/report')}>
-                  <td className="font-mono font-semibold">{log.url}</td>
-                  <td><span className={`verdict-badge ${log.badge}`}>{log.badgeText}</span></td>
-                  <td><span className={`risk-tag ${log.scoreClass}`}>{log.score}</span></td>
-                  <td>{log.signal}</td>
-                  <td className="font-mono text-xs">{log.time}</td>
+        {loading ? (
+          <div className="p-6 space-y-3 animate-pulse">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div key={idx} className="h-10 bg-slate-100 rounded w-full"></div>
+            ))}
+          </div>
+        ) : filteredLogs.length === 0 ? (
+          <div className="p-12 text-center text-brandText-muted text-sm">
+            {logs.length === 0 ? "No scan history recorded yet." : "No scan logs match the selected filter."}
+          </div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="signals-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '35%' }}>Analyzed Target / URL</th>
+                  <th style={{ width: '15%' }}>Verdict</th>
+                  <th style={{ width: '12%' }}>Risk Score</th>
+                  <th style={{ width: '20%' }}>Top Triggered Signal</th>
+                  <th style={{ width: '18%' }}>Timestamp</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredLogs.map((log) => {
+                  const vb = getVerdictBadge(log.verdict);
+                  return (
+                    <tr 
+                      key={log.id || log.url} 
+                      className="cursor-pointer hover:bg-slate-50 transition-colors" 
+                      onClick={() => navigate(`/report?id=${log.id}`)}
+                    >
+                      <td className="font-mono font-semibold max-w-[280px] truncate" title={log.url}>{log.url}</td>
+                      <td><span className={`verdict-badge ${vb.badge}`}>{vb.text}</span></td>
+                      <td><span className={`risk-tag ${getRiskScoreClass(log.risk_score)}`}>{log.risk_score} / 100</span></td>
+                      <td>{getPrimarySignal(log)}</td>
+                      <td className="font-mono text-xs text-brandText-muted">{timeAgo(log.scanned_at)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,29 +2,66 @@ import React, { useState } from 'react';
 
 export default function ThreatTrendChart({ 
   title = "7-Day Threat Detection Trend", 
-  subtitle = "Updated 2m ago", 
+  subtitle = "Live Database Metrics", 
   rightText = "Heuristics + ML Model Predictions",
-  safeLabel = "Safe Traffic",
-  threatLabel = "Malicious Threats"
+  safeLabel = "Total Scans",
+  threatLabel = "Phishing Detected",
+  data = null
 }) {
-  const [hoverIndex, setHoverIndex] = useState(7); // Default to "Today"
+  const [hoverIndex, setHoverIndex] = useState(null);
 
-  // Monochrome Palette (Slate Dark & Muted Slate)
-  const safeColor = '#0f172a';   // Deep Slate Navy
-  const threatColor = '#64748b'; // Muted Slate Gray
+  // Palette
+  const totalColor = '#0f172a';   // Deep Slate Navy
+  const threatColor = '#dc2626'; // Alert Red for Phishing
 
-  const dataPoints = [
-    { day: 'Mon', safe: 240, threat: 58, x: 70, safeY: 60, threatY: 150 },
-    { day: 'Tue', safe: 260, threat: 42, x: 170, safeY: 50, threatY: 160 },
-    { day: 'Wed', safe: 220, threat: 78, x: 270, safeY: 70, threatY: 140 },
-    { day: 'Thu', safe: 280, threat: 88, x: 370, safeY: 40, threatY: 135 },
-    { day: 'Fri', safe: 250, threat: 48, x: 470, safeY: 55, threatY: 155 },
-    { day: 'Sat', safe: 290, threat: 120, x: 570, safeY: 35, threatY: 120 },
-    { day: 'Sun', safe: 270, threat: 98, x: 670, safeY: 45, threatY: 130 },
-    { day: 'Today', safe: 284, threat: 110, x: 750, safeY: 38, threatY: 125 }
-  ];
+  let dataPoints = [];
+  
+  if (data && data.length > 0) {
+    const maxVal = Math.max(10, ...data.map(d => Math.max(d.total || 0, d.phishing || 0)));
+    const step = data.length > 1 ? 680 / (data.length - 1) : 0;
 
-  const activePoint = dataPoints[hoverIndex] || dataPoints[7];
+    dataPoints = data.map((item, idx) => {
+      const total = item.total || 0;
+      const threat = item.phishing || 0;
+      const x = 70 + idx * step;
+      const totalY = 170 - (total / maxVal) * 130;
+      const threatY = 170 - (threat / maxVal) * 130;
+
+      let dayLabel = item.date || `Day ${idx + 1}`;
+      if (item.date) {
+        const parts = item.date.split('-');
+        if (parts.length === 3) {
+          dayLabel = `${parts[1]}/${parts[2]}`;
+        }
+      }
+
+      return {
+        day: dayLabel,
+        total: total,
+        threat: threat,
+        x: x,
+        totalY: totalY,
+        threatY: threatY
+      };
+    });
+  } else {
+    dataPoints = [
+      { day: 'Mon', total: 0, threat: 0, x: 70, totalY: 170, threatY: 170 },
+      { day: 'Tue', total: 0, threat: 0, x: 170, totalY: 170, threatY: 170 },
+      { day: 'Wed', total: 0, threat: 0, x: 270, totalY: 170, threatY: 170 },
+      { day: 'Thu', total: 0, threat: 0, x: 370, totalY: 170, threatY: 170 },
+      { day: 'Fri', total: 0, threat: 0, x: 470, totalY: 170, threatY: 170 },
+      { day: 'Sat', total: 0, threat: 0, x: 570, totalY: 170, threatY: 170 },
+      { day: 'Sun', total: 0, threat: 0, x: 670, totalY: 170, threatY: 170 },
+      { day: 'Today', total: 0, threat: 0, x: 750, totalY: 170, threatY: 170 }
+    ];
+  }
+
+  const activeIndex = hoverIndex !== null && hoverIndex < dataPoints.length ? hoverIndex : dataPoints.length - 1;
+  const activePoint = dataPoints[activeIndex] || dataPoints[0];
+
+  const totalPolyline = dataPoints.map(p => `${p.x},${p.totalY}`).join(' ');
+  const threatPolyline = dataPoints.map(p => `${p.x},${p.threatY}`).join(' ');
 
   return (
     <div className="signals-container">
@@ -46,32 +83,30 @@ export default function ThreatTrendChart({
           <line x1="50" y1="130" x2="770" y2="130" stroke="#e2e8f0" strokeDasharray="4"/>
           <line x1="50" y1="170" x2="770" y2="170" stroke="#cbd5e1"/>
 
-          {/* Y-Axis Labels */}
-          <text x="35" y="34" textAnchor="end" fill="#64748b">300</text>
-          <text x="35" y="84" textAnchor="end" fill="#64748b">200</text>
-          <text x="35" y="134" textAnchor="end" fill="#64748b">100</text>
-          <text x="35" y="174" textAnchor="end" fill="#64748b">0</text>
-
           {/* Polyline Data Lines */}
           <polyline 
-            points="70,60 170,50 270,70 370,40 470,55 570,35 670,45 750,38" 
+            points={totalPolyline} 
             fill="none" 
-            stroke={safeColor}
+            stroke={totalColor}
             strokeWidth="2.5"
           />
           <polyline 
-            points="70,150 170,160 270,140 370,135 470,155 570,120 670,130 750,125" 
+            points={threatPolyline} 
             fill="none" 
             stroke={threatColor}
             strokeWidth="2.5"
           />
 
           {/* End Circles */}
-          <circle cx="750" cy="38" r="4" fill={safeColor}/>
-          <circle cx="750" cy="125" r="4" fill={threatColor}/>
+          {dataPoints.map((pt, idx) => (
+            <g key={idx}>
+              <circle cx={pt.x} cy={pt.totalY} r="3" fill={totalColor}/>
+              <circle cx={pt.x} cy={pt.threatY} r="3" fill={threatColor}/>
+            </g>
+          ))}
 
           {/* Vertical Guide Line on Hover */}
-          {hoverIndex !== null && (
+          {activePoint && (
             <line
               x1={activePoint.x}
               y1="30"
@@ -110,12 +145,12 @@ export default function ThreatTrendChart({
         {/* Legend */}
         <div className="flex gap-6 justify-center mt-3 text-xs">
           <span className="flex items-center gap-1.5 font-medium text-brandText-secondary">
-            <span className="w-3 h-0.5 inline-block" style={{ backgroundColor: safeColor }}></span> 
-            {safeLabel} ({activePoint.safe})
+            <span className="w-3 h-0.5 inline-block" style={{ backgroundColor: totalColor }}></span> 
+            {safeLabel} ({activePoint ? activePoint.total : 0})
           </span>
           <span className="flex items-center gap-1.5 font-medium text-brandText-secondary">
             <span className="w-3 h-0.5 inline-block" style={{ backgroundColor: threatColor }}></span> 
-            {threatLabel} ({activePoint.threat})
+            {threatLabel} ({activePoint ? activePoint.threat : 0})
           </span>
         </div>
       </div>

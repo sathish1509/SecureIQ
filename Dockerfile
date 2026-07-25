@@ -16,7 +16,8 @@ WORKDIR /app
 ENV PORT=5000 \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    CORS_ORIGINS="*"
+    CORS_ORIGINS="*" \
+    DATABASE_PATH="/app/scans.db"
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -28,8 +29,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy Python application code & ML model assets
+# Copy Python application code, DB persistence layer & ML model assets
 COPY app.py ./
+COPY database.py ./
 COPY feature_extractor.py ./
 COPY Model/ ./Model/
 

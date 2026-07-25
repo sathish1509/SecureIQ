@@ -10,8 +10,12 @@ import pandas as pd
 from flask import Flask, jsonify, request, send_from_directory
 
 from feature_extractor import extract_features
+from database import init_db, save_scan, get_recent_scans, get_stats, get_daily_trend, get_scan_by_id
 
 app = Flask(__name__, static_folder="dist", static_url_path="")
+
+# Initialize SQLite Database on startup
+init_db()
 
 try:
     from flask_cors import CORS
@@ -390,13 +394,37 @@ def health():
 @app.route("/api/stats", methods=["GET"])
 def stats():
     uptime_seconds = time.monotonic() - START_TIME
-    return jsonify(
-        {
-            "total_scans": 0,
-            "phishing_detected": 0,
-            "uptime": format_uptime(uptime_seconds),
-        }
-    )
+    data = get_stats()
+    data["uptime"] = format_uptime(uptime_seconds)
+    return jsonify(data)
+
+
+@app.route("/api/history", methods=["GET"])
+def history():
+    limit_arg = request.args.get("limit", 20)
+    try:
+        limit = int(limit_arg)
+    except ValueError:
+        limit = 20
+    return jsonify(get_recent_scans(limit=limit))
+
+
+@app.route("/api/scan/<int:scan_id>", methods=["GET"])
+def get_scan_route(scan_id):
+    scan = get_scan_by_id(scan_id)
+    if not scan:
+        return jsonify({"error": "Scan record not found"}), 404
+    return jsonify(scan)
+
+
+@app.route("/api/trend", methods=["GET"])
+def trend():
+    days_arg = request.args.get("days", 7)
+    try:
+        days = int(days_arg)
+    except ValueError:
+        days = 7
+    return jsonify(get_daily_trend(days=days))
 
 
 @app.route("/api/analyze", methods=["POST"])
@@ -415,6 +443,7 @@ def analyze():
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(analyze_with_model, url)
             result = future.result(timeout=ANALYZE_TIMEOUT_SECONDS)
+        save_scan(result)
         return jsonify(result)
     except FuturesTimeoutError:
         return jsonify({"error": "Analysis timed out after 8 seconds."}), 504

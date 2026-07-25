@@ -1,9 +1,16 @@
 import React from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const { isLoggedIn, user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
 
   return (
     <header className="bg-surface border-b border-brandBorder h-14 sticky top-0 z-50">
@@ -39,16 +46,6 @@ export default function Navbar() {
             }
           >
             URL Scanner
-          </NavLink>
-          <NavLink 
-            to="/email-scanner" 
-            className={({ isActive }) => 
-              `text-sm font-medium py-1.5 border-b-2 no-underline whitespace-nowrap transition-colors ${
-                isActive ? 'text-accentBlue border-accentBlue' : 'text-brandText-secondary border-transparent hover:text-brandText-main'
-              }`
-            }
-          >
-            Email Scanner
           </NavLink>
           <NavLink 
             to="/dashboard" 
@@ -97,16 +94,17 @@ export default function Navbar() {
                 </div>
                 <span className="hidden sm:inline text-xs font-semibold whitespace-nowrap">{user.name}</span>
               </Link>
-              <button onClick={logout} className="btn-outline btn-sm whitespace-nowrap">
+              <button onClick={handleLogout} className="btn-outline btn-sm whitespace-nowrap">
                 Logout
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2 pl-3 border-l border-brandBorder shrink-0">
               <Link to="/login" className="btn-outline btn-sm whitespace-nowrap">Login</Link>
-              <Link to="/scanner" className="btn-primary btn-sm whitespace-nowrap">Get Started</Link>
+              <Link to="/login" className="btn-primary btn-sm whitespace-nowrap">Get Started</Link>
             </div>
           )}
+
         </div>
       </div>
     </header>

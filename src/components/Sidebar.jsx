@@ -1,9 +1,16 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
   const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <aside className="bg-surface border border-brandBorder rounded-md p-4 shadow-sm flex flex-col gap-4 sticky top-20">
       <div>
@@ -26,14 +33,6 @@ export default function Sidebar() {
             }
           >
             <span className="font-mono text-xs">[URL]</span> URL Scanner
-          </NavLink>
-          <NavLink 
-            to="/email-scanner" 
-            className={({ isActive }) => 
-              `sidebar-menu-item ${isActive ? 'active' : ''}`
-            }
-          >
-            <span className="font-mono text-xs">[EML]</span> Email Scanner
           </NavLink>
           <NavLink 
             to="/history" 
@@ -83,13 +82,14 @@ export default function Sidebar() {
           >
             <span className="font-mono text-xs">[SET]</span> Settings
           </NavLink>
-          <NavLink 
-            to="/login" 
-            className="sidebar-menu-item text-danger-text hover:bg-danger-bg"
-            onClick={logout}
+          <button 
+            type="button"
+            className="sidebar-menu-item text-danger-text hover:bg-danger-bg w-full text-left cursor-pointer border-none bg-transparent"
+            onClick={handleLogout}
           >
             <span className="font-mono text-xs">[OUT]</span> Logout
-          </NavLink>
+          </button>
+
         </nav>
       </div>
     </aside>

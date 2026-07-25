@@ -9,13 +9,14 @@ export default function LoginPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     login();
-    navigate('/dashboard');
+    navigate('/scanner');
   };
 
   const handleGoogleLogin = () => {
     login();
-    navigate('/dashboard');
+    navigate('/scanner');
   };
+
 
   return (
     <div className="flex flex-col gap-8">

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}SecureIQ | Scan Inspection History{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-4);">
+        <div>
+            <h1 class="hero-title" style="font-size: 1.625rem; margin-bottom: 2px;">Inspection History Log</h1>
+            <p class="hero-subtitle">Audit trail of all URLs, domains, and emails analyzed by the SecureIQ engine.</p>
+        </div>
+        <div style="display: flex; gap: var(--space-2);">
+            <a href="/scanner" class="btn-primary btn-sm">+ Scan New Target</a>
+            <button class="btn-secondary btn-sm" onclick="alert('Exporting CSV log of past 500 scans...')">📥 Export CSV</button>
+        </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="signals-container" style="padding: var(--space-4) var(--space-6);">
+        <div class="filter-bar">
+            <!-- Filter Pills -->
+            <div class="filter-group">
+                <span class="sample-label">Filter by Verdict:</span>
+                <button type="button" class="filter-btn active" onclick="filterHistory('all', this)">All (2,491)</button>
+                <button type="button" class="filter-btn" onclick="filterHistory('safe', this)">Safe (1,850)</button>
+                <button type="button" class="filter-btn" onclick="filterHistory('suspicious', this)">Suspicious (420)</button>
+                <button type="button" class="filter-btn" onclick="filterHistory('malicious', this)">Malicious (221)</button>
+            </div>
+
+            <!-- Time Filter & Search Input -->
+            <div style="display: flex; gap: var(--space-3); align-items: center; flex: 1; max-width: 400px;">
+                <input 
+                    type="search" 
+                    id="history-search" 
+                    class="url-input" 
+                    placeholder="Search URL, domain, or keyword..." 
+                    style="height: 36px;"
+                    onkeyup="searchHistoryTable()"
+                >
+            </div>
+        </div>
+    </div>
+
+    <!-- History Log Table -->
+    <div class="signals-container">
+        <div class="table-wrapper">
+            <table class="signals-table" id="history-table">
+                <thead>
+                    <tr>
+                        <th scope="col" style="width: 35%;">Analyzed Target / URL</th>
+                        <th scope="col" style="width: 15%;">Verdict</th>
+                        <th scope="col" style="width: 12%;">Risk Score</th>
+                        <th scope="col" style="width: 20%;">Top Triggered Signal</th>
+                        <th scope="col" style="width: 18%;">Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr data-verdict="malicious" style="cursor: pointer;" onclick="window.location.href='/report'">
+                        <td class="mono-text" style="font-weight: 600;">http://192.168.1.1/paypal/verify-account.login.xyz</td>
+                        <td><span class="verdict-badge badge-danger">Malicious</span></td>
+                        <td><span class="risk-tag risk-high">94 / 100</span></td>
+                        <td>Raw IP Address + Typosquatting TLD</td>
+                        <td class="mono-text">2026-07-25 11:04:12 UTC</td>
+                    </tr>
+                    <tr data-verdict="suspicious" style="cursor: pointer;" onclick="window.location.href='/report'">
+                        <td class="mono-text" style="font-weight: 600;">http://secure-update-banking-verification.com/login</td>
+                        <td><span class="verdict-badge badge-warning">Suspicious</span></td>
+                        <td><span class="risk-tag risk-medium">62 / 100</span></td>
+                        <td>Targeted Credential Keywords</td>
+                        <td class="mono-text">2026-07-25 10:58:30 UTC</td>
+                    </tr>
+                    <tr data-verdict="safe" style="cursor: pointer;" onclick="window.location.href='/report'">
+                        <td class="mono-text" style="font-weight: 600;">https://github.com/security-advisories</td>
+                        <td><span class="verdict-badge badge-safe">Safe</span></td>
+                        <td><span class="risk-tag risk-safe">08 / 100</span></td>
+                        <td>Encrypted TLS Protocol</td>
+                        <td class="mono-text">2026-07-25 10:45:15 UTC</td>
+                    </tr>
+                    <tr data-verdict="malicious" style="cursor: pointer;" onclick="window.location.href='/report'">
+                        <td class="mono-text" style="font-weight: 600;">http://free-apple-giftcard-claim.tk/auth</td>
+                        <td><span class="verdict-badge badge-danger">Malicious</span></td>
+                        <td><span class="risk-tag risk-high">88 / 100</span></td>
+                        <td>Zero-Day Phishing Heuristic Match</td>
+                        <td class="mono-text">2026-07-25 10:12:04 UTC</td>
+                    </tr>
+                    <tr data-verdict="safe" style="cursor: pointer;" onclick="window.location.href='/report'">
+                        <td class="mono-text" style="font-weight: 600;">https://google.com</td>
+                        <td><span class="verdict-badge badge-safe">Safe</span></td>
+                        <td><span class="risk-tag risk-safe">04 / 100</span></td>
+                        <td>Verified Domain Authority</td>
+                        <td class="mono-text">2026-07-25 09:30:00 UTC</td>
+                    </tr>
+                    <tr data-verdict="suspicious" style="cursor: pointer;" onclick="window.location.href='/report'">
+                        <td class="mono-text" style="font-weight: 600;">http://account-recovery-portal.net/signin</td>
+                        <td><span class="verdict-badge badge-warning">Suspicious</span></td>
+                        <td><span class="risk-tag risk-medium">54 / 100</span></td>
+                        <td>Young Domain Registration (&lt; 5 days)</td>
+                        <td class="mono-text">2026-07-24 18:22:10 UTC</td>
+                    </tr>
+                    <tr data-verdict="malicious" style="cursor: pointer;" onclick="window.location.href='/report'">
+                        <td class="mono-text" style="font-weight: 600;">http://bit.ly/3xY9P1k-fake-auth</td>
+                        <td><span class="verdict-badge badge-danger">Malicious</span></td>
+                        <td><span class="risk-tag risk-high">92 / 100</span></td>
+                        <td>Shortener Obfuscation &amp; Redirect Chain</td>
+                        <td class="mono-text">2026-07-24 15:40:02 UTC</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterHistory(verdict, btn) {
+    // Update active filter button state
+    const buttons = document.querySelectorAll('.filter-btn');
+    buttons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Filter table rows
+    const rows = document.querySelectorAll('#history-table tbody tr');
+    rows.forEach(row => {
+        const rowVerdict = row.getAttribute('data-verdict');
+        if (verdict === 'all' || rowVerdict === verdict) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function searchHistoryTable() {
+    const query = document.getElementById('history-search').value.toLowerCase();
+    const rows = document.querySelectorAll('#history-table tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(query)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

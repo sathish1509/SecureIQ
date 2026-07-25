@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}SecureIQ | Enterprise Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="app-dashboard-shell">
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar">
+        <div>
+            <div class="sidebar-section-title">Admin Portal</div>
+            <nav class="sidebar-menu">
+                <a href="/admin" class="sidebar-menu-item active">
+                    <span class="mono-text">[ADM]</span> Overview & Stats
+                </a>
+                <a href="/dashboard" class="sidebar-menu-item">
+                    <span class="mono-text">[USR]</span> User Dashboard
+                </a>
+                <a href="/threat-intel" class="sidebar-menu-item">
+                    <span class="mono-text">[INT]</span> Live Threat Feed
+                </a>
+                <a href="/settings" class="sidebar-menu-item">
+                    <span class="mono-text">[SET]</span> Global Settings
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Main Admin Dashboard Body -->
+    <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-4);">
+            <div>
+                <span class="verdict-badge badge-danger" style="margin-bottom: 6px; display: inline-block;">ENTERPRISE ADMIN PORTAL</span>
+                <h1 class="hero-title" style="font-size: 1.625rem; margin-bottom: 2px;">System Infrastructure & Telemetry</h1>
+                <p class="hero-subtitle" style="font-size: 0.875rem;">Model performance metrics, user quotas, and live cluster health.</p>
+            </div>
+            <div style="display: flex; gap: var(--space-2);">
+                <button class="btn-primary btn-sm" onclick="alert('Retraining ML model cluster on latest 50k samples...')">⚡ Retrain Model</button>
+                <button class="btn-secondary btn-sm" onclick="alert('Flushed edge caching nodes.')">🧹 Flush Cache</button>
+            </div>
+        </div>
+
+        <!-- 4 Key Infrastructure Stat Cards -->
+        <div class="target-specs-grid">
+            <div class="spec-card">
+                <span class="spec-label">Inference Engine Latency</span>
+                <span class="score-number" style="font-size: 2rem; color: var(--status-safe-fill);">18.4 ms</span>
+                <span class="meta-label" style="font-size: 0.75rem; color: var(--status-safe-text);">p99 &lt; 25ms SLA</span>
+            </div>
+            <div class="spec-card">
+                <span class="spec-label">Active API Users</span>
+                <span class="score-number" style="font-size: 2rem;">1,842</span>
+                <span class="meta-label" style="font-size: 0.75rem; color: var(--text-muted);">482 Enterprise Accounts</span>
+            </div>
+            <div class="spec-card">
+                <span class="spec-label">Model Accuracy</span>
+                <span class="score-number" style="font-size: 2rem; color: var(--status-safe-fill);">99.42%</span>
+                <span class="meta-label" style="font-size: 0.75rem; color: var(--text-muted);">Precision: 99.1% • Recall: 99.6%</span>
+            </div>
+            <div class="spec-card">
+                <span class="spec-label">Daily API Throughput</span>
+                <span class="score-number" style="font-size: 2rem;">4.8M</span>
+                <span class="meta-label" style="font-size: 0.75rem; color: var(--text-muted);">Requests / 24 Hours</span>
+            </div>
+        </div>
+
+        <!-- User Management & Quotas Table -->
+        <div class="signals-container">
+            <div class="signals-header">
+                <div class="signals-title-group">
+                    <h2 class="signals-title">Enterprise User & API Quota Management</h2>
+                    <span class="signals-count">5 Active Organizations</span>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table class="signals-table">
+                    <thead>
+                        <tr>
+                            <th>Organization</th>
+                            <th>Admin Email</th>
+                            <th>API Quota Usage</th>
+                            <th>Tier</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="font-weight: 600;">Acme Corp Cyber Team</td>
+                            <td class="mono-text">security@acmecorp.com</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div class="score-meter-track" style="flex: 1;"><div class="score-meter-fill meter-safe" style="width: 42%;"></div></div>
+                                    <span class="mono-text" style="font-size: 0.75rem;">42K / 100K</span>
+                                </div>
+                            </td>
+                            <td><span class="verdict-badge badge-safe">Enterprise</span></td>
+                            <td><span class="status-indicator online"></span> Active</td>
+                            <td><button class="btn-outline btn-sm" onclick="alert('Managing Acme Corp settings...')">Manage</button></td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600;">Global Financial Services</td>
+                            <td class="mono-text">soc@globalfin.org</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div class="score-meter-track" style="flex: 1;"><div class="score-meter-fill meter-warning" style="width: 88%;"></div></div>
+                                    <span class="mono-text" style="font-size: 0.75rem;">88K / 100K</span>
+                                </div>
+                            </td>
+                            <td><span class="verdict-badge badge-safe">Enterprise Pro</span></td>
+                            <td><span class="status-indicator online"></span> Active</td>
+                            <td><button class="btn-outline btn-sm" onclick="alert('Managing Global Financial settings...')">Manage</button></td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600;">TechSphere Solutions</td>
+                            <td class="mono-text">secops@techsphere.io</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div class="score-meter-track" style="flex: 1;"><div class="score-meter-fill meter-safe" style="width: 15%;"></div></div>
+                                    <span class="mono-text" style="font-size: 0.75rem;">15K / 100K</span>
+                                </div>
+                            </td>
+                            <td><span class="verdict-badge badge-neutral">Standard</span></td>
+                            <td><span class="status-indicator online"></span> Active</td>
+                            <td><button class="btn-outline btn-sm" onclick="alert('Managing TechSphere settings...')">Manage</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Live Model Console Logs -->
+        <div class="signals-container">
+            <div class="signals-header">
+                <h2 class="signals-title">Live Engine Inference Console Logs</h2>
+                <span class="signals-count">STDOUT Stream</span>
+            </div>
+            <div style="padding: var(--space-4); background-color: var(--accent-navy); color: #00ff66; font-family: var(--font-mono); font-size: 0.8125rem; height: 180px; overflow-y: auto; line-height: 1.6;">
+                [2026-07-25 11:04:12.182] INFO engine.inference: Analyzed http://192.168.1.1/paypal/login - Score: 94 - Verdict: MALICIOUS (24.1ms)<br>
+                [2026-07-25 11:04:12.190] WARN engine.rules: IP_HOST_MATCHED: 192.168.1.1 flagged under severe vector #38<br>
+                [2026-07-25 11:04:15.801] INFO engine.inference: Analyzed https://github.com/security - Score: 08 - Verdict: SAFE (12.4ms)<br>
+                [2026-07-25 11:04:18.004] INFO engine.intel_feed: Synced 1,240 new telemetry pulses from AlienVault OTX<br>
+                [2026-07-25 11:04:20.912] INFO engine.inference: Analyzed http://free-apple-giftcard-claim.tk - Score: 88 - Verdict: MALICIOUS (18.9ms)<br>
+                [2026-07-25 11:04:22.400] OK   cluster.health: 4/4 inference worker nodes healthy (CPU: 14%, MEM: 38%)
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

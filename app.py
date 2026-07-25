@@ -136,7 +136,67 @@ def analyze_url_heuristics(url_str):
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html")
+    return render_template("landing.html", active_page="landing")
+
+@app.route("/landing", methods=["GET"])
+def landing():
+    return render_template("landing.html", active_page="landing")
+
+@app.route("/login", methods=["GET"])
+def login():
+    return render_template("login.html", active_page="login")
+
+@app.route("/dashboard", methods=["GET"])
+def dashboard():
+    return render_template("dashboard.html", active_page="dashboard")
+
+@app.route("/scanner", methods=["GET"])
+def scanner():
+    return render_template("scanner.html", active_page="scanner")
+
+@app.route("/report", methods=["GET"])
+def report():
+    return render_template("report.html", active_page="report")
+
+@app.route("/email-scanner", methods=["GET"])
+def email_scanner():
+    return render_template("email_scanner.html", active_page="email")
+
+@app.route("/history", methods=["GET"])
+def history():
+    return render_template("history.html", active_page="history")
+
+@app.route("/threat-intel", methods=["GET"])
+def threat_intel():
+    return render_template("threat_intel.html", active_page="threat-intel")
+
+@app.route("/extension", methods=["GET"])
+def extension():
+    return render_template("extension.html", active_page="extension")
+
+@app.route("/notifications", methods=["GET"])
+def notifications():
+    return render_template("notifications.html", active_page="notifications")
+
+@app.route("/settings", methods=["GET"])
+def settings():
+    return render_template("settings.html", active_page="settings")
+
+@app.route("/profile", methods=["GET"])
+def profile():
+    return render_template("profile.html", active_page="profile")
+
+@app.route("/about", methods=["GET"])
+def about():
+    return render_template("about.html", active_page="about")
+
+@app.route("/admin", methods=["GET"])
+def admin():
+    return render_template("admin.html", active_page="admin")
+
+@app.route("/coming-soon", methods=["GET"])
+def coming_soon():
+    return render_template("coming_soon.html", active_page="coming-soon")
 
 @app.route("/analyze", methods=["POST"])
 def analyze():

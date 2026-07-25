@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}SecureIQ | Threat Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="app-dashboard-shell">
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar">
+        <div>
+            <div class="sidebar-section-title">Navigation</div>
+            <nav class="sidebar-menu">
+                <a href="/dashboard" class="sidebar-menu-item active">
+                    <span class="mono-text">[DB]</span> Dashboard
+                </a>
+                <a href="/scanner" class="sidebar-menu-item">
+                    <span class="mono-text">[URL]</span> URL Scanner
+                </a>
+                <a href="/email-scanner" class="sidebar-menu-item">
+                    <span class="mono-text">[EML]</span> Email Scanner
+                </a>
+                <a href="/history" class="sidebar-menu-item">
+                    <span class="mono-text">[HIS]</span> Scan History
+                </a>
+                <a href="/report" class="sidebar-menu-item">
+                    <span class="mono-text">[REP]</span> Reports
+                </a>
+                <a href="/threat-intel" class="sidebar-menu-item">
+                    <span class="mono-text">[INT]</span> Threat Intel
+                </a>
+            </nav>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-subtle); padding-top: var(--space-3);">
+            <div class="sidebar-section-title">Account</div>
+            <nav class="sidebar-menu">
+                <a href="/profile" class="sidebar-menu-item">
+                    <span class="mono-text">[USR]</span> Profile
+                </a>
+                <a href="/settings" class="sidebar-menu-item">
+                    <span class="mono-text">[SET]</span> Settings
+                </a>
+                <a href="/admin" class="sidebar-menu-item">
+                    <span class="mono-text">[ADM]</span> Admin Portal
+                </a>
+                <a href="/login" class="sidebar-menu-item" style="color: var(--status-danger-text);">
+                    <span class="mono-text">[OUT]</span> Logout
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Main Dashboard Body -->
+    <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+        <!-- Header & Quick Actions -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4);">
+            <div>
+                <h1 class="hero-title" style="font-size: 1.5rem; margin-bottom: 2px;">Security Command Center</h1>
+                <p class="hero-subtitle" style="font-size: 0.875rem;">Real-time threat monitoring and heuristic detection overview.</p>
+            </div>
+            <div style="display: flex; gap: var(--space-2);">
+                <a href="/scanner" class="btn-primary btn-sm">+ Scan New URL</a>
+                <a href="/email-scanner" class="btn-secondary btn-sm">+ Analyze Email</a>
+                <a href="/report" class="btn-outline btn-sm">Export Summary</a>
+            </div>
+        </div>
+
+        <!-- Top 4 Stat Cards -->
+        <div class="target-specs-grid">
+            <div class="spec-card">
+                <span class="spec-label">URLs Scanned (Today)</span>
+                <span class="score-number" style="font-size: 2rem;">1,482</span>
+                <span class="meta-label" style="font-size: 0.75rem; color: var(--status-safe-text);">↑ +14.2% from yesterday</span>
+            </div>
+            <div class="spec-card">
+                <span class="spec-label">Safe Domains</span>
+                <span class="score-number" style="font-size: 2rem; color: var(--status-safe-fill);">1,210</span>
+                <span class="meta-label" style="font-size: 0.75rem; color: var(--text-muted);">81.6% benign traffic</span>
+            </div>
+            <div class="spec-card">
+                <span class="spec-label">Suspicious Flagged</span>
+                <span class="score-number" style="font-size: 2rem; color: var(--status-warn-fill);">184</span>
+                <span class="meta-label" style="font-size: 0.75rem; color: var(--status-warn-text);">Medium risk heuristic match</span>
+            </div>
+            <div class="spec-card">
+                <span class="spec-label">Malicious Blocked</span>
+                <span class="score-number" style="font-size: 2rem; color: var(--status-danger-fill);">88</span>
+                <span class="meta-label" style="font-size: 0.75rem; color: var(--status-danger-text);">Confirmed phishing attempts</span>
+            </div>
+        </div>
+
+        <!-- Threat Trend Chart (SVG Visualization) -->
+        <div class="signals-container">
+            <div class="signals-header">
+                <div class="signals-title-group">
+                    <h2 class="signals-title">7-Day Threat Detection Trend</h2>
+                    <span class="signals-count">Updated 2m ago</span>
+                </div>
+                <div class="signals-filter-note">Heuristics + ML Model Predictions</div>
+            </div>
+            <div style="padding: var(--space-6);">
+                <svg viewBox="0 0 800 200" style="width: 100%; height: auto; font-family: var(--font-mono); font-size: 11px;">
+                    <!-- Grid Lines -->
+                    <line x1="50" y1="30" x2="770" y2="30" stroke="#e2e8f0" stroke-dasharray="4"/>
+                    <line x1="50" y1="80" x2="770" y2="80" stroke="#e2e8f0" stroke-dasharray="4"/>
+                    <line x1="50" y1="130" x2="770" y2="130" stroke="#e2e8f0" stroke-dasharray="4"/>
+                    <line x1="50" y1="170" x2="770" y2="170" stroke="#cbd5e1"/>
+
+                    <!-- Y-Axis Labels -->
+                    <text x="35" y="34" text-anchor="end" fill="#64748b">300</text>
+                    <text x="35" y="84" text-anchor="end" fill="#64748b">200</text>
+                    <text x="35" y="134" text-anchor="end" fill="#64748b">100</text>
+                    <text x="35" y="174" text-anchor="end" fill="#64748b">0</text>
+
+                    <!-- Trend Line: Safe Traffic -->
+                    <polyline points="70,60 170,50 270,70 370,40 470,55 570,35 670,45 750,38" fill="none" stroke="#10b981" stroke-width="2.5"/>
+                    <!-- Trend Line: Malicious Blocked -->
+                    <polyline points="70,150 170,160 270,140 370,135 470,155 570,120 670,130 750,125" fill="none" stroke="#ef4444" stroke-width="2.5"/>
+
+                    <!-- Data Points -->
+                    <circle cx="750" cy="38" r="4" fill="#10b981"/>
+                    <circle cx="750" cy="125" r="4" fill="#ef4444"/>
+
+                    <!-- X-Axis Labels -->
+                    <text x="70" y="190" text-anchor="middle" fill="#64748b">Mon</text>
+                    <text x="170" y="190" text-anchor="middle" fill="#64748b">Tue</text>
+                    <text x="270" y="190" text-anchor="middle" fill="#64748b">Wed</text>
+                    <text x="370" y="190" text-anchor="middle" fill="#64748b">Thu</text>
+                    <text x="470" y="190" text-anchor="middle" fill="#64748b">Fri</text>
+                    <text x="570" y="190" text-anchor="middle" fill="#64748b">Sat</text>
+                    <text x="670" y="190" text-anchor="middle" fill="#64748b">Sun</text>
+                    <text x="750" y="190" text-anchor="middle" fill="#0f172a" font-weight="bold">Today</text>
+                </svg>
+
+                <div style="display: flex; gap: var(--space-6); justify-content: center; margin-top: var(--space-2); font-size: 0.8125rem;">
+                    <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 3px; background: #10b981; display: inline-block;"></span> Safe Traffic</span>
+                    <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 3px; background: #ef4444; display: inline-block;"></span> Malicious Threats</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Table -->
+        <div class="signals-container">
+            <div class="signals-header">
+                <div class="signals-title-group">
+                    <h2 class="signals-title">Recent Inspection Log</h2>
+                    <span class="signals-count">Last 5 Scans</span>
+                </div>
+                <a href="/history" class="mono-text" style="color: var(--accent-blue); text-decoration: none; font-size: 0.8125rem;">View Full History →</a>
+            </div>
+            <div class="table-wrapper">
+                <table class="signals-table">
+                    <thead>
+                        <tr>
+                            <th>Target URL</th>
+                            <th>Status</th>
+                            <th>Risk Score</th>
+                            <th>Category / Risk Signal</th>
+                            <th>Time</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="mono-text">http://192.168.1.1/paypal/verify-account.login.xyz</td>
+                            <td><span class="verdict-badge badge-danger">Malicious</span></td>
+                            <td><span class="risk-tag risk-high">94 / 100</span></td>
+                            <td>Raw IP + Typosquatting TLD</td>
+                            <td class="mono-text">11:04:12 UTC</td>
+                            <td><a href="/report" class="btn-outline btn-sm">Report</a></td>
+                        </tr>
+                        <tr>
+                            <td class="mono-text">http://secure-update-banking-verification.com/login</td>
+                            <td><span class="verdict-badge badge-warning">Suspicious</span></td>
+                            <td><span class="risk-tag risk-medium">62 / 100</span></td>
+                            <td>High-Risk Keywords + Hyphenation</td>
+                            <td class="mono-text">10:58:30 UTC</td>
+                            <td><a href="/report" class="btn-outline btn-sm">Report</a></td>
+                        </tr>
+                        <tr>
+                            <td class="mono-text">https://github.com/security-advisories</td>
+                            <td><span class="verdict-badge badge-safe">Safe</span></td>
+                            <td><span class="risk-tag risk-safe">08 / 100</span></td>
+                            <td>Encrypted TLS + Domain Reputation</td>
+                            <td class="mono-text">10:45:15 UTC</td>
+                            <td><a href="/report" class="btn-outline btn-sm">Report</a></td>
+                        </tr>
+                        <tr>
+                            <td class="mono-text">http://free-apple-giftcard-claim.tk/auth</td>
+                            <td><span class="verdict-badge badge-danger">Malicious</span></td>
+                            <td><span class="risk-tag risk-high">88 / 100</span></td>
+                            <td>Zero-Day Phishing Heuristic Match</td>
+                            <td class="mono-text">10:12:04 UTC</td>
+                            <td><a href="/report" class="btn-outline btn-sm">Report</a></td>
+                        </tr>
+                        <tr>
+                            <td class="mono-text">https://google.com</td>
+                            <td><span class="verdict-badge badge-safe">Safe</span></td>
+                            <td><span class="risk-tag risk-safe">04 / 100</span></td>
+                            <td>Verified Domain Authority</td>
+                            <td class="mono-text">09:30:00 UTC</td>
+                            <td><a href="/report" class="btn-outline btn-sm">Report</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

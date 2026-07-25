@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}SecureIQ | Threat Notification States & Security Alerts{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Header -->
+    <div class="hero-header">
+        <h1 class="hero-title">Browser & In-App Security Notification States</h1>
+        <p class="hero-subtitle">Standardized visual alerts presented when users navigate to analyzed targets.</p>
+    </div>
+
+    <!-- Notification 1: Dangerous (Red) -->
+    <section class="signals-container">
+        <div class="signals-header" style="background-color: var(--status-danger-bg); border-bottom-color: var(--status-danger-border);">
+            <div class="signals-title-group">
+                <span class="verdict-badge badge-danger">1. DANGEROUS STATE (RED)</span>
+                <h2 class="signals-title" style="color: var(--status-danger-text);">High-Risk Phishing Warning</h2>
+            </div>
+            <span class="mono-text" style="font-size: 0.75rem; color: var(--status-danger-text);">Risk Score: 94/100</span>
+        </div>
+        <div style="padding: var(--space-6); background-color: var(--status-danger-bg); display: flex; flex-direction: column; gap: var(--space-4);">
+            <div style="display: flex; gap: var(--space-4); align-items: flex-start;">
+                <div style="font-size: 2.5rem; line-height: 1;">🛑</div>
+                <div>
+                    <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--status-danger-text);">Warning: Malicious Phishing Site Detected</h3>
+                    <p style="font-size: 0.9375rem; color: var(--status-danger-text); margin-top: 4px;">
+                        SecureIQ prevented access to <code>http://192.168.1.1/paypal/verify-account.login.xyz</code> because it attempts to steal credentials or financial passwords.
+                    </p>
+                </div>
+            </div>
+            <div style="display: flex; gap: var(--space-3); margin-top: var(--space-2);">
+                <button type="button" class="btn-primary" style="background-color: #991b1b; border-color: #991b1b;" onclick="alert('Redirecting back to safety...')">🛡️ Leave Website Immediately (Recommended)</button>
+                <button type="button" class="btn-outline" style="color: var(--status-danger-text); border-color: var(--status-danger-border);" onclick="confirm('Warning: This site is unsafe. Are you sure you want to proceed?') && alert('Proceeding at your own risk.')">Continue Anyway (Unsafe)</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Notification 2: Suspicious (Yellow) -->
+    <section class="signals-container">
+        <div class="signals-header" style="background-color: var(--status-warn-bg); border-bottom-color: var(--status-warn-border);">
+            <div class="signals-title-group">
+                <span class="verdict-badge badge-warning">2. SUSPICIOUS STATE (YELLOW)</span>
+                <h2 class="signals-title" style="color: var(--status-warn-text);">Medium Risk Anomaly Flag</h2>
+            </div>
+            <span class="mono-text" style="font-size: 0.75rem; color: var(--status-warn-text);">Risk Score: 62/100</span>
+        </div>
+        <div style="padding: var(--space-6); background-color: var(--status-warn-bg); display: flex; flex-direction: column; gap: var(--space-4);">
+            <div style="display: flex; gap: var(--space-4); align-items: flex-start;">
+                <div style="font-size: 2.5rem; line-height: 1;">⚠️</div>
+                <div>
+                    <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--status-warn-text);">Caution: Suspicious Domain Attributes Detected</h3>
+                    <p style="font-size: 0.9375rem; color: var(--status-warn-text); margin-top: 4px;">
+                        The target <code>http://secure-update-banking-verification.com/login</code> contains brand keywords and recent domain creation traits. Exercise extreme caution.
+                    </p>
+                </div>
+            </div>
+            <div style="display: flex; gap: var(--space-3); margin-top: var(--space-2);">
+                <button type="button" class="btn-primary" style="background-color: #92400e; border-color: #92400e;" onclick="alert('Returning to safe dashboard...')">🛡️ Return to Safety</button>
+                <button type="button" class="btn-outline" style="color: var(--status-warn-text); border-color: var(--status-warn-border);" onclick="alert('Proceeding with caution.')">Proceed Carefully</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Notification 3: Safe (Green) -->
+    <section class="signals-container">
+        <div class="signals-header" style="background-color: var(--status-safe-bg); border-bottom-color: var(--status-safe-border);">
+            <div class="signals-title-group">
+                <span class="verdict-badge badge-safe">3. SAFE STATE (GREEN)</span>
+                <h2 class="signals-title" style="color: var(--status-safe-text);">Verified Legitimate Domain</h2>
+            </div>
+            <span class="mono-text" style="font-size: 0.75rem; color: var(--status-safe-text);">Risk Score: 04/100</span>
+        </div>
+        <div style="padding: var(--space-6); background-color: var(--status-safe-bg); display: flex; flex-direction: column; gap: var(--space-4);">
+            <div style="display: flex; gap: var(--space-4); align-items: flex-start;">
+                <div style="font-size: 2.5rem; line-height: 1;">✅</div>
+                <div>
+                    <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--status-safe-text);">Domain Verified Safe to Visit</h3>
+                    <p style="font-size: 0.9375rem; color: var(--status-safe-text); margin-top: 4px;">
+                        Target <code>https://google.com</code> possesses valid SSL encryption, established domain reputation, and zero threat anomalies.
+                    </p>
+                </div>
+            </div>
+            <div style="display: flex; gap: var(--space-3); margin-top: var(--space-2);">
+                <button type="button" class="btn-primary" style="background-color: #065f46; border-color: #065f46;" onclick="alert('Navigating to target...')">Continue to Website</button>
+                <a href="/scanner" class="btn-outline" style="color: var(--status-safe-text); border-color: var(--status-safe-border);">Rescan Target</a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

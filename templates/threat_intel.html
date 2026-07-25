@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}SecureIQ | Real-Time Threat Intelligence Feed{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-4);">
+        <div>
+            <div class="brand-tag" style="margin-bottom: 6px; display: inline-block;">GLOBAL THREAT MATRIX</div>
+            <h1 class="hero-title" style="font-size: 1.75rem; margin-bottom: 2px;">Threat Intelligence & Campaign Tracking</h1>
+            <p class="hero-subtitle">Live intelligence telemetry feeding the SecureIQ AI heuristic model.</p>
+        </div>
+        <div style="display: flex; gap: var(--space-2);">
+            <button class="btn-primary btn-sm" onclick="alert('Subscribed to automated threat feed alerts!')">🔔 Subscribe Feed</button>
+            <a href="/admin" class="btn-secondary btn-sm">API Feed Access</a>
+        </div>
+    </div>
+
+    <!-- Category Cards (Malware, Phishing, Scam, Botnet, Ransomware) -->
+    <div class="info-grid" style="grid-template-columns: repeat(5, 1fr);">
+        <div class="feature-card" style="padding: var(--space-4);">
+            <div class="feature-icon-box" style="background-color: var(--status-danger-bg); color: var(--status-danger-text);">PH</div>
+            <h3 style="font-size: 0.9375rem; font-weight: 700;">Phishing</h3>
+            <span class="score-number" style="font-size: 1.5rem; color: var(--status-danger-text);">8,410</span>
+            <span class="meta-label" style="font-size: 0.75rem;">Active Domains</span>
+        </div>
+
+        <div class="feature-card" style="padding: var(--space-4);">
+            <div class="feature-icon-box" style="background-color: var(--status-warn-bg); color: var(--status-warn-text);">MW</div>
+            <h3 style="font-size: 0.9375rem; font-weight: 700;">Malware</h3>
+            <span class="score-number" style="font-size: 1.5rem; color: var(--status-warn-text);">3,120</span>
+            <span class="meta-label" style="font-size: 0.75rem;">Payload Hosts</span>
+        </div>
+
+        <div class="feature-card" style="padding: var(--space-4);">
+            <div class="feature-icon-box" style="background-color: var(--status-danger-bg); color: var(--status-danger-text);">RW</div>
+            <h3 style="font-size: 0.9375rem; font-weight: 700;">Ransomware</h3>
+            <span class="score-number" style="font-size: 1.5rem; color: var(--status-danger-text);">418</span>
+            <span class="meta-label" style="font-size: 0.75rem;">C2 Servers</span>
+        </div>
+
+        <div class="feature-card" style="padding: var(--space-4);">
+            <div class="feature-icon-box" style="background-color: var(--status-warn-bg); color: var(--status-warn-text);">BN</div>
+            <h3 style="font-size: 0.9375rem; font-weight: 700;">Botnet</h3>
+            <span class="score-number" style="font-size: 1.5rem; color: var(--status-warn-text);">1,290</span>
+            <span class="meta-label" style="font-size: 0.75rem;">Relay Nodes</span>
+        </div>
+
+        <div class="feature-card" style="padding: var(--space-4);">
+            <div class="feature-icon-box">SC</div>
+            <h3 style="font-size: 0.9375rem; font-weight: 700;">Scam</h3>
+            <span class="score-number" style="font-size: 1.5rem;">2,840</span>
+            <span class="meta-label" style="font-size: 0.75rem;">Impersonators</span>
+        </div>
+    </div>
+
+    <!-- Live Threat Feed & Region Distribution Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 340px; gap: var(--space-6);">
+        <!-- Live Stream Feed Table -->
+        <div class="signals-container">
+            <div class="signals-header">
+                <div class="signals-title-group">
+                    <h2 class="signals-title">Live Phishing Campaign Stream</h2>
+                    <span class="status-indicator online"></span>
+                    <span class="signals-count">Streaming...</span>
+                </div>
+                <div class="signals-filter-note">Auto-updated via Threat Engine API</div>
+            </div>
+            <div class="table-wrapper">
+                <table class="signals-table">
+                    <thead>
+                        <tr>
+                            <th>Threat Domain / Target</th>
+                            <th>Threat Category</th>
+                            <th>Risk Score</th>
+                            <th>Target Brand</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="mono-text"><code>auth-verify-chase-banking.xyz</code></td>
+                            <td><span class="risk-tag risk-high">Phishing</span></td>
+                            <td><span class="score-number" style="font-size: 1rem; color: var(--status-danger-text);">98</span></td>
+                            <td>Chase Bank</td>
+                        </tr>
+                        <tr>
+                            <td class="mono-text"><code>update-microsoft365-login.net</code></td>
+                            <td><span class="risk-tag risk-high">Phishing</span></td>
+                            <td><span class="score-number" style="font-size: 1rem; color: var(--status-danger-text);">96</span></td>
+                            <td>Microsoft 365</td>
+                        </tr>
+                        <tr>
+                            <td class="mono-text"><code>free-crypto-airdrop-claim.tech</code></td>
+                            <td><span class="risk-tag risk-medium">Scam</span></td>
+                            <td><span class="score-number" style="font-size: 1rem; color: var(--status-warn-text);">78</span></td>
+                            <td>Coinbase / Web3</td>
+                        </tr>
+                        <tr>
+                            <td class="mono-text"><code>payload-cdn-download.ru</code></td>
+                            <td><span class="risk-tag risk-high">Malware</span></td>
+                            <td><span class="score-number" style="font-size: 1rem; color: var(--status-danger-text);">99</span></td>
+                            <td>Generic Trojan</td>
+                        </tr>
+                        <tr>
+                            <td class="mono-text"><code>login-amazon-prime-security.info</code></td>
+                            <td><span class="risk-tag risk-high">Phishing</span></td>
+                            <td><span class="score-number" style="font-size: 1rem; color: var(--status-danger-text);">92</span></td>
+                            <td>Amazon</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Region Distribution & Trending Attacks -->
+        <div style="display: flex; flex-direction: column; gap: var(--space-6);">
+            <!-- Top Target Domains -->
+            <div class="signals-container">
+                <div class="signals-header">
+                    <h2 class="signals-title">Top Impersonated Brands</h2>
+                </div>
+                <div style="padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3);">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+                        <span>1. Microsoft / Office 365</span>
+                        <strong style="color: var(--status-danger-text);">31.2%</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+                        <span>2. PayPal / Financials</span>
+                        <strong style="color: var(--status-danger-text);">22.4%</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+                        <span>3. Google Workspace</span>
+                        <strong style="color: var(--status-warn-text);">15.8%</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+                        <span>4. Apple ID</span>
+                        <strong style="color: var(--status-warn-text);">11.1%</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+                        <span>5. DHL / Shipping Scams</span>
+                        <strong>8.3%</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Regional Distribution Matrix -->
+            <div class="signals-container">
+                <div class="signals-header">
+                    <h2 class="signals-title">Regional Attack Density</h2>
+                </div>
+                <div style="padding: var(--space-4); font-size: 0.8125rem; display: flex; flex-direction: column; gap: var(--space-2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>North America (US/CA)</span>
+                        <span class="risk-tag risk-high">High (44%)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Europe (EU/UK)</span>
+                        <span class="risk-tag risk-medium">Med (31%)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Asia Pacific (APAC)</span>
+                        <span class="risk-tag risk-medium">Med (18%)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Latin America (LATAM)</span>
+                        <span class="risk-tag risk-low">Low (7%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

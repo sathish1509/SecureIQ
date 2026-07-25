@@ -60,20 +60,27 @@ document.addEventListener('DOMContentLoaded', () => {
         setLoadingState(true);
 
         try {
-            const response = await fetch('/analyze', {
+            const fetchPromise = fetch('/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ url })
+            }).then(async res => {
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || `Server responded with status ${res.status}`);
+                }
+                return res.json();
             });
 
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error || `Server responded with status ${response.status}`);
+            let data;
+            if (typeof window.runScanWithSteps === 'function') {
+                data = await window.runScanWithSteps(url, fetchPromise);
+            } else {
+                data = await fetchPromise;
             }
 
-            const data = await response.json();
             renderResults(data);
         } catch (err) {
             showError(err.message || 'Network error occurred while analyzing the URL.');

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useSearchParams, Link } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 export default function ScanReportPage() {
   const location = useLocation();
@@ -32,9 +33,9 @@ export default function ScanReportPage() {
     setLoading(true);
     setError(null);
 
-    let fetchUrl = '/api/history?limit=1';
+    let fetchUrl = `${API_BASE_URL}/api/history?limit=1`;
     if (targetScanId) {
-      fetchUrl = `/api/scan/${targetScanId}`;
+      fetchUrl = `${API_BASE_URL}/api/scan/${targetScanId}`;
     }
 
     fetch(fetchUrl)

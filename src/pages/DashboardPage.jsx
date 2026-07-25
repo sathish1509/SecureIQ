@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import ThreatTrendChart from '../components/ThreatTrendChart';
 import { timeAgo } from '../utils/timeAgo';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 
 export default function DashboardPage() {
   const { token } = useAuth();
@@ -21,9 +22,9 @@ export default function DashboardPage() {
 
     try {
       const [statsRes, historyRes, trendRes] = await Promise.all([
-        fetch('/api/stats', { headers }).then(res => res.ok ? res.json() : null),
-        fetch('/api/history?limit=10', { headers }).then(res => res.ok ? res.json() : []),
-        fetch('/api/trend?days=7', { headers }).then(res => res.ok ? res.json() : [])
+        fetch(`${API_BASE_URL}/api/stats`, { headers }).then(res => res.ok ? res.json() : null),
+        fetch(`${API_BASE_URL}/api/history?limit=10`, { headers }).then(res => res.ok ? res.json() : []),
+        fetch(`${API_BASE_URL}/api/trend?days=7`, { headers }).then(res => res.ok ? res.json() : [])
       ]);
 
       if (statsRes) setStats(statsRes);

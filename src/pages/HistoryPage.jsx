@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { timeAgo } from '../utils/timeAgo';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 
 export default function HistoryPage() {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    fetch('/api/history?limit=100', { headers })
+    fetch(`${API_BASE_URL}/api/history?limit=100`, { headers })
       .then(res => res.ok ? res.json() : [])
       .then(data => {
         setLogs(Array.isArray(data) ? data : []);

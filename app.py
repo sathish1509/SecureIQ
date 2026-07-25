@@ -30,11 +30,12 @@ init_db()
 try:
     from flask_cors import CORS
 
-    cors_origins_env = os.getenv("CORS_ORIGINS", "*")
-    if cors_origins_env == "*":
-        CORS(app, origins="*")
+    cors_origins_env = os.getenv("CORS_ORIGINS")
+    if cors_origins_env and cors_origins_env.strip() != "*":
+        origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+        CORS(app, origins=origins)
     else:
-        CORS(app, origins=[o.strip() for o in cors_origins_env.split(",") if o.strip()])
+        CORS(app, origins="*")
 except ImportError:
     pass
 
@@ -719,4 +720,5 @@ def serve(path):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    port = int(os.getenv("PORT", 5000))
+    app.run(debug=True, host="0.0.0.0", port=port)

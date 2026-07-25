@@ -13,8 +13,10 @@ try:
 except ImportError:
     pass
 
+# Note: Render's default filesystem is ephemeral across redeploys unless using a Render Persistent Disk.
+# In production on Render, mount a persistent disk (e.g., /var/data) and set DB_PATH=/var/data/scans.db
 DATABASE_URL = os.getenv("DATABASE_URL")
-DB_PATH = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "scans.db"))
+DB_PATH = os.getenv("DB_PATH") or os.getenv("DATABASE_PATH") or os.path.join(os.path.dirname(__file__), "scans.db")
 
 
 USE_POSTGRES = False

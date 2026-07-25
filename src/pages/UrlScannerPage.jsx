@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 
 export default function UrlScannerPage() {
   const { token } = useAuth();
@@ -16,9 +17,9 @@ export default function UrlScannerPage() {
     { label: 'Safe Domain Sample', url: 'https://google.com' }
   ];
 
-  const handleScan = async (targetUrl) => {
-    const cleanUrl = targetUrl || url;
-    if (!cleanUrl.trim()) {
+  const handleScan = async (inputUrl) => {
+    const targetUrl = inputUrl || url;
+    if (!targetUrl.trim()) {
       setErrorMsg('Please enter a valid URL to analyze.');
       return;
     }
@@ -26,6 +27,7 @@ export default function UrlScannerPage() {
     setErrorMsg('');
     setScanResult(null);
     setIsScanning(true);
+    setActiveStep(0);
 
     // Multi-step animation sequence
     for (let step = 1; step <= 5; step++) {
@@ -39,10 +41,10 @@ export default function UrlScannerPage() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('/analyze', {
+      const response = await fetch(`${API_BASE_URL}/analyze`, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ url: cleanUrl })
+        body: JSON.stringify({ url: targetUrl })
       });
 
       if (!response.ok) {

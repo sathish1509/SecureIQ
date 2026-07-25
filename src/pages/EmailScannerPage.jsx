@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config';
 
 export default function EmailScannerPage() {
   const { token } = useAuth();
@@ -41,7 +42,7 @@ PayPal Security Operations`;
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('/api/analyze-email', {
+      const response = await fetch(`${API_BASE_URL}/api/analyze-email`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ raw_text: textToAnalyze })

@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
-  const { isAdmin, logout } = useAuth();
+  const { logout } = useAuth();
   return (
     <aside className="bg-surface border border-brandBorder rounded-md p-4 shadow-sm flex flex-col gap-4 sticky top-20">
       <div>
@@ -83,16 +83,6 @@ export default function Sidebar() {
           >
             <span className="font-mono text-xs">[SET]</span> Settings
           </NavLink>
-          {isAdmin && (
-            <NavLink 
-              to="/admin" 
-              className={({ isActive }) => 
-                `sidebar-menu-item ${isActive ? 'active' : ''}`
-              }
-            >
-              <span className="font-mono text-xs">[ADM]</span> Admin Portal
-            </NavLink>
-          )}
           <NavLink 
             to="/login" 
             className="sidebar-menu-item text-danger-text hover:bg-danger-bg"

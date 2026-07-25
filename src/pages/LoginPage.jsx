@@ -39,7 +39,7 @@ export default function LoginPage() {
                 className="h-10 px-3 font-body text-sm text-brandText-main bg-surface border border-brandBorder-strong rounded-md focus:outline-none focus:border-accentBlue focus:ring-2 focus:ring-accentBlue/20" 
                 placeholder="security@organization.com" 
                 required 
-                defaultValue="admin@secureiq.io"
+                defaultValue="analyst@secureiq.io"
               />
             </div>
 

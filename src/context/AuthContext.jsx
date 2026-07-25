@@ -11,12 +11,10 @@ export function AuthProvider({ children }) {
     name: 'Sathish Kumar',
     email: 'sathish@secureiq.io',
     avatar: 'SA',
-    role: 'admin' // Set to 'admin' for enterprise admin, or 'user' for standard accounts
+    role: 'user'
   });
 
-  const isAdmin = isLoggedIn && user?.role === 'admin';
-
-  const login = (role = 'admin') => {
+  const login = (role = 'user') => {
     setIsLoggedIn(true);
     setUser((prev) => ({ ...prev, role }));
     localStorage.setItem('secureiq_is_logged_in', 'true');
@@ -28,7 +26,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, user, isAdmin, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

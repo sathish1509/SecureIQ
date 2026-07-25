@@ -1,14 +1,6 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-
-function ProtectedAdminRoute({ children }) {
-  const { isAdmin } = useAuth();
-  if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return children;
-}
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -26,7 +18,6 @@ import NotificationsPage from './pages/NotificationsPage';
 import SettingsPage from './pages/SettingsPage';
 import ProfilePage from './pages/ProfilePage';
 import AboutPage from './pages/AboutPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 
 export default function App() {
@@ -52,14 +43,6 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/about" element={<AboutPage />} />
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedAdminRoute>
-                  <AdminDashboardPage />
-                </ProtectedAdminRoute>
-              } 
-            />
             <Route path="/coming-soon" element={<ComingSoonPage />} />
             <Route path="*" element={<ComingSoonPage />} />
           </Routes>

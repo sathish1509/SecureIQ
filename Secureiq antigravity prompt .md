@@ -88,9 +88,6 @@ Instead, build in an **Enterprise Minimalism / Trust & Authority** direction:
 ### 13. About / 14. Help Center
 - Standard informational pages: mission, technology, how it works, privacy, contact, FAQs, docs, support, tutorials, feedback.
 
-### 15. Admin Dashboard (enterprise tier)
-- System stats, user management, threat analytics, API monitoring, live threat feed, model accuracy, logs.
-
 ## Navigation flow
 
 ```

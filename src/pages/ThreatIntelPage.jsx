@@ -18,7 +18,7 @@ export default function ThreatIntelPage() {
         </div>
         <div className="flex gap-2">
           <button className="btn-primary btn-sm" onClick={() => alert('Subscribed to automated threat feed alerts!')}>🔔 Subscribe Feed</button>
-          <button className="btn-secondary btn-sm" onClick={() => navigate('/admin')}>API Feed Access</button>
+          <button className="btn-secondary btn-sm" onClick={() => navigate('/settings')}>API Feed Access</button>
         </div>
       </div>
 

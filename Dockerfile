@@ -23,6 +23,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy Python application code
 COPY app.py ./
+COPY feature_extractor.py ./
+COPY Model/ ./Model/
 
 # Copy built React static assets from Stage 1
 COPY --from=frontend-builder /app/dist ./dist

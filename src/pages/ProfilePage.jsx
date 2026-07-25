@@ -13,7 +13,7 @@ export default function ProfilePage() {
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <h1 className="font-heading text-2xl font-semibold text-brandText-main">Sathish Kumar</h1>
-              <span className="verdict-badge badge-safe">Enterprise Administrator</span>
+              <span className="verdict-badge badge-safe">Enterprise Security Analyst</span>
             </div>
             <div className="font-mono text-xs text-brandText-muted mt-1">sathish@secureiq.io • Organization: SecureIQ Security Labs</div>
             <div className="text-xs text-brandText-secondary mt-1.5">Member since January 2026 • Role: Lead Security Analyst</div>
